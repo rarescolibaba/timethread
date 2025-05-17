@@ -21,6 +21,8 @@ namespace @interface
         private StatsPanel _statsPanel;
         private List<ProcessData> _processData;
         private ProcessData _selectedProcess;
+        private ProcessMonitor _processMonitor;
+        private Timer _updateTimer;
 
         /// <summary>
         /// Constructor for the main form
@@ -32,7 +34,16 @@ namespace @interface
             Size = new Size(800, 600);
             
             InitializeControls();
-            LoadSampleData();
+            
+            // Initialize process monitor and timer for updating UI
+            _processMonitor = new ProcessMonitor();
+            _updateTimer = new Timer();
+            _updateTimer.Interval = 10000; // Update every 10 seconds
+            _updateTimer.Tick += UpdateTimer_Tick;
+            _updateTimer.Start();
+            
+            // Load initial data
+            LoadRealProcessData();
         }
 
         /// <summary>
@@ -73,7 +84,7 @@ namespace @interface
             {
                 Location = new Point(570, 10),
                 Size = new Size(200, 250),
-                Categories = new List<string> { "Games", "Learning", "Coding", "Entertainment" }
+                Categories = new List<string> { "Games", "Learning", "Coding", "Entertainment", "Other" }
             };
             
             // Handle category selection
@@ -94,56 +105,20 @@ namespace @interface
         }
 
         /// <summary>
-        /// Loads sample process data
+        /// Updates the UI with current process data
         /// </summary>
-        private void LoadSampleData()
+        private void UpdateTimer_Tick(object sender, EventArgs e)
         {
-            _processData = new List<ProcessData>();
-            
-            // Create sample processes
-            AddSampleProcess("Chrome", 1234, "Entertainment", 3.5);
-            AddSampleProcess("Visual Studio", 2345, "Coding", 5.2);
-            AddSampleProcess("Notepad++", 3456, "Coding", 1.8);
-            AddSampleProcess("Steam", 4567, "Games", 2.0);
-            AddSampleProcess("Minecraft", 5678, "Games", 4.3);
-            AddSampleProcess("Duolingo", 6789, "Learning", 1.1);
-            AddSampleProcess("Excel", 7890, "Learning", 0.7);
-            AddSampleProcess("Netflix", 8901, "Entertainment", 2.5);
-            
-            // Update the process list
-            UpdateProcessList();
+            LoadRealProcessData();
         }
 
         /// <summary>
-        /// Adds a sample process with random historical data
+        /// Loads real process data from the system
         /// </summary>
-        /// <param name="name">Process name</param>
-        /// <param name="pid">Process ID</param>
-        /// <param name="department">Process category</param>
-        /// <param name="hoursToday">Hours spent today</param>
-        private void AddSampleProcess(string name, int pid, string department, double hoursToday)
+        private void LoadRealProcessData()
         {
-            ProcessData process = new ProcessData
-            {
-                Name = name,
-                PID = pid,
-                Department = department,
-                TimeToday = TimeSpan.FromHours(hoursToday)
-            };
-            
-            // Generate random historical data for the past 30 days
-            Random random = new Random();
-            DateTime now = DateTime.Now;
-            
-            for (int i = 0; i < 30; i++)
-            {
-                DateTime date = now.AddDays(-30 + i);
-                double hours = random.NextDouble() * 6; // Random hours between 0 and 6
-                process.HistoricalData.Add(new KeyValuePair<DateTime, double>(date, hours));
-            }
-            
-            // Add process to the list
-            _processData.Add(process);
+            _processData = _processMonitor.GetProcessData();
+            UpdateProcessList();
         }
 
         /// <summary>
@@ -226,6 +201,16 @@ namespace @interface
         private void CategorySelector_CategorySelected(object sender, string category)
         {
             UpdateProcessList();
+        }
+
+        /// <summary>
+        /// Clean up resources when form is closing
+        /// </summary>
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            base.OnFormClosing(e);
+            _updateTimer.Stop();
+            _processMonitor.StopMonitoring();
         }
     }
 }
