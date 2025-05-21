@@ -22,7 +22,12 @@ namespace @interface
         private List<ProcessData> _processData;
         private ProcessData _selectedProcess;
         private ProcessMonitor _processMonitor;
+        private UsageDataService _dataService;
         private Timer _updateTimer;
+        private const int DisplayDays = 30; // Number of days to display in the graph
+        private DateTime _lastBootTime;
+        private string _currentGraphView = "TOTAL_PC_ON_TIME"; // Possible values: TOTAL_PC_ON_TIME, CATEGORY, PROCESS
+        private string _selectedCategoryForGraph = null;
 
         /// <summary>
         /// Constructor for the main form
@@ -33,17 +38,40 @@ namespace @interface
             Text = "Process Time Tracker";
             Size = new Size(800, 600);
             
-            InitializeControls();
-            
-            // Initialize process monitor and timer for updating UI
-            _processMonitor = new ProcessMonitor();
-            _updateTimer = new Timer();
-            _updateTimer.Interval = 10000; // Update every 10 seconds
-            _updateTimer.Tick += UpdateTimer_Tick;
-            _updateTimer.Start();
-            
-            // Load initial data
+            try
+            {
+                _lastBootTime = ProcessMonitor.GetLastBootUpTime();
+                _dataService = new UsageDataService();
+                InitializeControls();
+                _processMonitor = new ProcessMonitor();
+                
+                _updateTimer = new Timer();
+                _updateTimer.Interval = 10000; // Update every 10 seconds for process list and stats
+                _updateTimer.Tick += UpdateTimer_Tick;
+                _updateTimer.Start();
+                
+                LoadRealProcessData();
+                UpdateGraphView(); // Initial graph view
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error initializing application: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Updates the UI with current process data and stats panel
+        /// </summary>
+        private void UpdateTimer_Tick(object sender, EventArgs e)
+        {
             LoadRealProcessData();
+            // Update stats panel with current uptime if no process is selected
+            if (_selectedProcess == null)
+            {
+                TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
+                _statsPanel.UpdateSystemUptime(uptime);
+            } 
+            // else the stats panel is updated by ProcessListView_SelectedIndexChanged or CategorySelector_CategorySelected
         }
 
         /// <summary>
@@ -105,14 +133,6 @@ namespace @interface
         }
 
         /// <summary>
-        /// Updates the UI with current process data
-        /// </summary>
-        private void UpdateTimer_Tick(object sender, EventArgs e)
-        {
-            LoadRealProcessData();
-        }
-
-        /// <summary>
         /// Loads real process data from the system
         /// </summary>
         private void LoadRealProcessData()
@@ -147,22 +167,19 @@ namespace @interface
                 
                 _processListView.Items.Add(item);
             }
-        }
-
-        /// <summary>
-        /// Updates the graph with data from the selected process
-        /// </summary>
-        private void UpdateGraph()
-        {
+            
+            // If a process was previously selected, try to find and select it again
             if (_selectedProcess != null)
             {
-                _usageGraph.Title = $"{_selectedProcess.Name} Usage";
-                _usageGraph.TimeData = _selectedProcess.HistoricalData;
-            }
-            else
-            {
-                _usageGraph.Title = "Usage Over Time";
-                _usageGraph.TimeData = new List<KeyValuePair<DateTime, double>>();
+                foreach (ListViewItem item in _processListView.Items)
+                {
+                    ProcessData process = item.Tag as ProcessData;
+                    if (process != null && process.PID == _selectedProcess.PID)
+                    {
+                        item.Selected = true;
+                        break;
+                    }
+                }
             }
         }
 
@@ -177,30 +194,127 @@ namespace @interface
         }
 
         /// <summary>
+        /// Updates the graph based on the current view state (_currentGraphView, _selectedProcess, _selectedCategoryForGraph)
+        /// </summary>
+        private void UpdateGraphView()
+        {
+            List<KeyValuePair<DateTime, double>> graphData = new List<KeyValuePair<DateTime, double>>();
+            string graphTitle = "PC Usage Data";
+
+            switch (_currentGraphView)
+            {
+                case "PROCESS":
+                    if (_selectedProcess != null)
+                    {
+                        graphTitle = $"{_selectedProcess.Name} Usage (Active Time)";
+                        graphData = _dataService.GetHistoricalDataForProcess(_selectedProcess.Name, DisplayDays);
+                    }
+                    else
+                    {
+                        _currentGraphView = "TOTAL_PC_ON_TIME";
+                        UpdateGraphView(); 
+                        return;
+                    }
+                    break;
+
+                case "CATEGORY":
+                    if (!string.IsNullOrEmpty(_selectedCategoryForGraph) && _selectedCategoryForGraph != "All")
+                    {
+                        graphTitle = $"{_selectedCategoryForGraph} Category (Total Active Time)";
+                        graphData = _dataService.GetTotalActiveTimeForCategory(_selectedCategoryForGraph, DisplayDays);
+                    }
+                    else
+                    {
+                        _currentGraphView = "TOTAL_PC_ON_TIME";
+                         _selectedCategoryForGraph = null; 
+                        UpdateGraphView(); 
+                        return;
+                    }
+                    break;
+
+                case "TOTAL_PC_ON_TIME":
+                default:
+                    graphTitle = "Total PC On Time (Persisted)";
+                    // Use the persisted data for the graph
+                    graphData = _dataService.GetPersistedDailySystemOnTime(DisplayDays);
+                    // For today's entry in the graph, we might want to update it with the live calculated value if it's more current
+                    // than the last saved value, or rely on ProcessMonitor to save it frequently.
+                    // For simplicity now, we use what's persisted. ProcessMonitor updates it every minute.
+                    _currentGraphView = "TOTAL_PC_ON_TIME"; 
+                    break;
+            }
+
+            _usageGraph.Title = graphTitle;
+            if (graphData.Any() && graphData.Any(d => d.Value > 0.001)) // Check if there's any significant data
+            {
+                 _usageGraph.TimeData = graphData;
+            }
+            else
+            {
+                List<KeyValuePair<DateTime, double>> emptyTimeline = new List<KeyValuePair<DateTime, double>>();
+                for (int i = 0; i < DisplayDays; i++)
+                {
+                    emptyTimeline.Add(new KeyValuePair<DateTime, double>(DateTime.Today.AddDays(-(DisplayDays -1) + i), 0));
+                }
+                _usageGraph.TimeData = emptyTimeline;
+            }
+            Console.WriteLine($"Graph updated: {graphTitle} with {graphData.Count} points. View: {_currentGraphView}");
+        }
+
+        /// <summary>
         /// Handles selection changes in the process list view
         /// </summary>
-        /// <param name="sender">Event sender</param>
-        /// <param name="e">Event arguments</param>
         private void ProcessListView_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (_processListView.SelectedItems.Count > 0)
             {
                 ListViewItem item = _processListView.SelectedItems[0];
                 _selectedProcess = item.Tag as ProcessData;
-                
-                UpdateGraph();
-                _statsPanel.UpdateStats(_selectedProcess);
+                _selectedCategoryForGraph = null; // Clear category selection
+                _currentGraphView = "PROCESS";
+                UpdateGraphView();
+                _statsPanel.UpdateStats(_selectedProcess); // Show process specific stats
+            }
+            else
+            {
+                _selectedProcess = null;
+                 // If no category is actively selected for graph, revert to total PC on time
+                if (string.IsNullOrEmpty(_selectedCategoryForGraph) || _selectedCategoryForGraph == "All")
+                {
+                    _currentGraphView = "TOTAL_PC_ON_TIME";
+                }
+                // Otherwise, keep the CATEGORY view (e.g. user cleared process selection but wants to see category graph)
+                UpdateGraphView();
+                _statsPanel.ClearStats();
+                TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
+                _statsPanel.UpdateSystemUptime(uptime); // Show system uptime
             }
         }
 
         /// <summary>
-        /// Handles category selection changes
+        /// Handles category selection changes from the CategorySelector panel
         /// </summary>
-        /// <param name="sender">Event sender</param>
-        /// <param name="category">Selected category</param>
         private void CategorySelector_CategorySelected(object sender, string category)
         {
-            UpdateProcessList();
+            UpdateProcessList(); // Filter the list view
+            _selectedProcess = null; // Clear any selected process
+            _processListView.SelectedItems.Clear(); // Visually clear selection in list
+
+            if (!string.IsNullOrEmpty(category) && category != "All")
+            {
+                _selectedCategoryForGraph = category;
+                _currentGraphView = "CATEGORY";
+                _statsPanel.UpdateCategoryStats(category, _dataService.GetTotalActiveTimeForCategory(category, 1).FirstOrDefault().Value * 60); // Show total time for category today
+            }
+            else
+            {
+                _selectedCategoryForGraph = null;
+                _currentGraphView = "TOTAL_PC_ON_TIME";
+                _statsPanel.ClearStats();
+                 TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
+                _statsPanel.UpdateSystemUptime(uptime);
+            }
+            UpdateGraphView();
         }
 
         /// <summary>

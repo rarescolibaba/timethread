@@ -63,6 +63,7 @@
     <Compile Include="StatsPanel.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="UsageDataService.cs" />
     <Compile Include="UsageGraph.cs">
       <SubType>Component</SubType>
     </Compile>

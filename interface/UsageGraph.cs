@@ -151,7 +151,7 @@ namespace @interface
             
             // Find max value for scaling
             double maxValue = _timeData.Max(d => d.Value);
-            if (maxValue == 0) maxValue = 1; // Avoid division by zero
+            if (maxValue < 1) maxValue = 1; // Ensure minimum scale of 1 hour
             
             // Draw Y-axis
             using (Pen axisPen = new Pen(Color.Black, 1))
@@ -177,18 +177,32 @@ namespace @interface
                 // Draw X-axis
                 g.DrawLine(axisPen, graphLeft, graphBottom, Width - margin, graphBottom);
                 
-                // Draw X-axis labels
+                // Draw X-axis labels - show more dates for better readability
                 if (_timeData.Count > 0)
                 {
                     using (Font axisFont = new Font("Arial", 8))
                     {
-                        // Draw first date
-                        g.DrawString(_timeData.First().Key.ToString("MM/dd"), axisFont, Brushes.Black, 
-                            graphLeft, graphBottom + 5);
+                        // Draw dates at regular intervals
+                        int labelCount = Math.Min(5, _timeData.Count); // Show up to 5 date labels
+                        int step = _timeData.Count / labelCount;
                         
-                        // Draw last date
-                        g.DrawString(_timeData.Last().Key.ToString("MM/dd"), axisFont, Brushes.Black, 
-                            Width - margin - 30, graphBottom + 5);
+                        for (int i = 0; i < _timeData.Count; i += step)
+                        {
+                            if (i < _timeData.Count)
+                            {
+                                float xPos = graphLeft + (i * graphWidth / (_timeData.Count - 1));
+                                g.DrawString(_timeData[i].Key.ToString("MM/dd"), axisFont, Brushes.Black, 
+                                    xPos - 10, graphBottom + 5);
+                            }
+                        }
+                        
+                        // Always show the last date
+                        if (_timeData.Count > 1)
+                        {
+                            float xPos = graphLeft + graphWidth;
+                            g.DrawString(_timeData.Last().Key.ToString("MM/dd"), axisFont, Brushes.Black, 
+                                xPos - 10, graphBottom + 5);
+                        }
                     }
                 }
             }
@@ -221,6 +235,31 @@ namespace @interface
                         foreach (Point p in points)
                         {
                             g.FillEllipse(pointBrush, p.X - 3, p.Y - 3, 6, 6);
+                        }
+                    }
+                    
+                    // Draw value labels for some points for better readability
+                    using (Font valueFont = new Font("Arial", 7))
+                    {
+                        // Draw labels for some points (not all to avoid clutter)
+                        int labelStep = Math.Max(1, _timeData.Count / 10);
+                        for (int i = 0; i < _timeData.Count; i += labelStep)
+                        {
+                            if (_timeData[i].Value > 0.1) // Only show value if significant
+                            {
+                                string valueText = _timeData[i].Value.ToString("0.0") + "h";
+                                g.DrawString(valueText, valueFont, Brushes.DarkBlue, 
+                                    points[i].X - 8, points[i].Y - 15);
+                            }
+                        }
+                        
+                        // Always show the last value if significant
+                        if (_timeData.Last().Value > 0.1)
+                        {
+                            int lastIndex = _timeData.Count - 1;
+                            string valueText = _timeData[lastIndex].Value.ToString("0.0") + "h";
+                            g.DrawString(valueText, valueFont, Brushes.DarkBlue, 
+                                points[lastIndex].X - 8, points[lastIndex].Y - 15);
                         }
                     }
                 }

@@ -18,7 +18,10 @@ namespace @interface
         private Dictionary<int, DateTime> _processStartTimes;
         private Dictionary<string, string> _processCategories;
         private Timer _monitorTimer;
+        private Timer _saveDataTimer;
         private const int MonitorInterval = 5000; // 5 seconds
+        private const int SaveDataInterval = 60000; // 1 minute
+        private UsageDataService _dataService;
 
         /// <summary>
         /// Constructor for ProcessMonitor
@@ -28,9 +31,13 @@ namespace @interface
             _processes = new Dictionary<int, ProcessData>();
             _processStartTimes = new Dictionary<int, DateTime>();
             _processCategories = InitializeDefaultCategories();
+            _dataService = new UsageDataService();
             
             // Start monitoring processes
             _monitorTimer = new Timer(MonitorProcesses, null, 0, MonitorInterval);
+            
+            // Start saving data to CSV
+            _saveDataTimer = new Timer(SaveDataToCSV, null, SaveDataInterval, SaveDataInterval);
         }
 
         /// <summary>
@@ -261,11 +268,89 @@ namespace @interface
         }
 
         /// <summary>
-        /// Stop monitoring processes
+        /// Stops monitoring processes
         /// </summary>
         public void StopMonitoring()
         {
             _monitorTimer?.Dispose();
+            _saveDataTimer?.Dispose();
+            
+            // Save data one more time before stopping
+            SaveDataToCSV(null);
+        }
+
+        /// <summary>
+        /// Save process data to CSV file and update daily system on-time.
+        /// </summary>
+        private void SaveDataToCSV(object state)
+        {
+            try
+            {
+                // Save process data (as before)
+                List<ProcessData> processesToSave;
+                lock (_processes)
+                {
+                    processesToSave = _processes.Values.ToList();
+                }
+                _dataService.SaveProcessData(processesToSave);
+
+                // Calculate and save today's total system on-time
+                DateTime lastBoot = GetLastBootUpTime();
+                if (lastBoot != DateTime.MinValue)
+                {
+                    // The GetDailySystemOnTime method returns a list, for today it will be one item.
+                    var todayOnTimeData = _dataService.GetDailySystemOnTime(1, lastBoot);
+                    if (todayOnTimeData.Any())
+                    {
+                         // The method calculates up to the current moment for today.
+                        double currentTodayOnTimeHours = todayOnTimeData.First().Value;
+                        _dataService.SaveDailySystemOnTime(DateTime.Today, currentTodayOnTimeHours);
+                        Console.WriteLine($"Saved today's system on-time: {currentTodayOnTimeHours:F2} hours.");
+                    }
+                }
+            }
+            catch (Exception ex) // General catch for the method
+            {
+                Console.WriteLine($"Error in SaveDataToCSV (ProcessMonitor): {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Gets the last boot up time of the system.
+        /// </summary>
+        /// <returns>DateTime representing the last boot up time, or DateTime.MinValue if an error occurs.</returns>
+        public static DateTime GetLastBootUpTime()
+        {
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT LastBootUpTime FROM Win32_OperatingSystem"))
+                {
+                    foreach (ManagementObject os in searcher.Get())
+                    {
+                        return ManagementDateTimeConverter.ToDateTime(os["LastBootUpTime"].ToString());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting last boot up time: {ex.Message}");
+                // In a real application, you might want to log this or handle it more gracefully.
+            }
+            return DateTime.MinValue; // Should not happen in a normal scenario
+        }
+
+        /// <summary>
+        /// Gets the current system uptime.
+        /// </summary>
+        /// <param name="lastBootTime">The system's last boot time.</param>
+        /// <returns>TimeSpan representing the system uptime.</returns>
+        public static TimeSpan GetSystemUptime(DateTime lastBootTime)
+        {
+            if (lastBootTime == DateTime.MinValue)
+            {
+                return TimeSpan.Zero;
+            }
+            return DateTime.Now - lastBootTime;
         }
     }
 } 
