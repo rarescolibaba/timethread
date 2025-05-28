@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProcessMonitorLib", "Proces
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UsageDataServiceLib", "UsageDataServiceLib\UsageDataServiceLib.csproj", "{873805D8-D1D0-4D6C-8EDE-03D350788BF8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestareaUnitatilor", "TestareaUnitatilor\TestareaUnitatilor.csproj", "{6933535B-2D90-4224-B723-06E7A9708E76}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{873805D8-D1D0-4D6C-8EDE-03D350788BF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{873805D8-D1D0-4D6C-8EDE-03D350788BF8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{873805D8-D1D0-4D6C-8EDE-03D350788BF8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6933535B-2D90-4224-B723-06E7A9708E76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6933535B-2D90-4224-B723-06E7A9708E76}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6933535B-2D90-4224-B723-06E7A9708E76}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6933535B-2D90-4224-B723-06E7A9708E76}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

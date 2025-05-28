@@ -1,9 +1,25 @@
-// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
-// UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
-// Functionalitate: 
-// Clasa de servicii pentru gestionarea persistentei si preluarii datelor despre utilizarea proceselor
-// si a timpului total de functionare a sistemului in aplicatia Process Time Tracker.
-// ---------------------------------------------------------------------------------------------------
+/**************************************************************************
+ *                                                                        *
+ *  File:        UsageDataService.cs (sau numele real al fisierului)      *
+ *  Copyright:   (c) 2025, Bostan Sorina-Gabriela, Brinza Denis-Stefan,   *
+ *  Colibaba Rares-Andrei, Dodita Alexandru-Tomi                          *
+ *  Authors:     Bostan Sorina-Gabriela, Brinza Denis-Stefan,             *
+ *               Colibaba Rares-Andrei, Dodita Alexandru-Tomi             *
+ *  University:  Universitatea Tehnica "Gheorghe Asachi" din Iasi         *
+ *  Group:       1312A                                                    *
+ *                                                                        *
+ *  Description: Implementarea clasei UsageDataService, responsabila      *
+ *               cu gestionarea persistentei datelor aplicatiei           *
+ *               TimeThread. Aceasta include crearea si mentenanta        *
+ *               fisierelor CSV pentru datele de utilizare ale            *
+ *               proceselor si pentru timpul total de functionare zilnic  *
+ *               al sistemului. Clasa ofera metode pentru salvarea        *
+ *               datelor noi sau actualizate.                             *
+ *                                                                        *
+ *  This code is part of the TimeThread application, a process time       *
+ *  tracking utility.                                                     *
+ *                                                                        *
+ **************************************************************************/
 
 using System;
 using System.Collections.Generic;
@@ -23,8 +39,6 @@ namespace UsageDataServiceLib
     {
         private string _dataFilePath;
         private string _dailySystemOnTimeCsvPath;
-        
-        //!!!ACUM CREEAZA FOLDERUL SI .csv IN DIRECTORUL BIN!!!
         private const string DATA_FOLDER = "data";
         private const string CSV_FILENAME = "usage_data.csv";
         private const string DAILY_ON_TIME_CSV_FILENAME = "daily_system_on_time.csv";

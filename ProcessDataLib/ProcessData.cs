@@ -1,8 +1,25 @@
-﻿// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
-// UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
-// Functionalitate:
-// Clasa ce reprezinta un proces si datele sale de utilizare pentru aplicatia Process Time Tracker.
-// ---------------------------------------------------------------------------------------------------
+﻿/**************************************************************************
+ *                                                                        *
+ *  File:        ProcessData.cs                                           *
+ *  Copyright:   (c) 2025, Bostan Sorina-Gabriela, Brinza Denis-Stefan,   *
+ *  Colibaba Rares-Andrei, Dodita Alexandru-Tomi                          *
+ *  Authors:     Bostan Sorina-Gabriela, Brinza Denis-Stefan,             *
+ *               Colibaba Rares-Andrei, Dodita Alexandru-Tomi             *
+ *  University:  Universitatea Tehnica "Gheorghe Asachi" din Iasi         *
+ *  Group:       1312A                                                    *
+ *                                                                        *
+ *  Description: Defineste clasa ProcessData, care actioneaza ca un       *
+ *               model de date pentru a stoca informatii despre un        *
+ *               proces individual monitorizat. Aceasta include numele    *
+ *               procesului, PID-ul, categoria, timpul de utilizare       *
+ *               pentru ziua curenta si o lista de date istorice.         *
+ *               Clasa ofera si metode simple pentru a obtine timpul      *
+ *               total, activ si inactiv estimat.                         *
+ *                                                                        *
+ *  This code is part of the TimeThread application, a process time       *
+ *  tracking utility.                                                     *
+ *                                                                        *
+ **************************************************************************/
 using System;
 using System.Collections.Generic;
 using System.Linq;

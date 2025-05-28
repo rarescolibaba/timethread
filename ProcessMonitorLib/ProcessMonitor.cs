@@ -1,8 +1,26 @@
-// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
-// UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
-// Functionalitate:
-//Clasa pentru monitorizarea proceselor sistemului si urmarirea timpului de utilizare in aplicatia Process Time Tracker.
-// ---------------------------------------------------------------------------------------------------
+﻿/**************************************************************************
+ *                                                                        *
+ *  File:        ProcessMonitor.cs                                        *
+ *  Copyright:   (c) 2025, Bostan Sorina-Gabriela, Brinza Denis-Stefan,   *
+ *  Colibaba Rares-Andrei, Dodita Alexandru-Tomi                          *
+ *  Authors:     Bostan Sorina-Gabriela, Brinza Denis-Stefan,             *
+ *               Colibaba Rares-Andrei, Dodita Alexandru-Tomi             *
+ *  University:  Universitatea Tehnica "Gheorghe Asachi" din Iasi         *
+ *  Group:       1312A                                                    *
+ *                                                                        *
+ *  Description: Implementarea clasei ProcessMonitor responsabila cu      *
+ *               monitorizarea proceselor active ale sistemului,          *
+ *               colectarea datelor de utilizare (timp, categorie),       *
+ *               si orchestrarea salvarii periodice a acestor date.       *
+ *               Aceasta clasa utilizeaza timere pentru scanarea          *
+ *               periodica a proceselor si pentru salvarea datelor,       *
+ *               interactionand cu API-urile sistemului de operare        *
+ *               si cu UsageDataService pentru persistenta datelor.       *
+ *                                                                        *
+ *  This code is part of the TimeThread application, a process time       *
+ *  tracking utility.                                                     *
+ *                                                                        *
+ **************************************************************************/
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -359,5 +377,8 @@ namespace ProcessMonitorLib
             }
             return DateTime.Now - lastBootTime;
         }
+
     }
+
+
 }
