@@ -11,8 +11,10 @@ using System.Linq;
 using System.Management;
 using System.Threading;
 using System.Threading.Tasks;
+using ProcessDataLib;
+using UsageDataServiceLib;
 
-namespace @interface
+namespace ProcessMonitorLib
 {
     /// <summary>
     /// Clasa pentru monitorizarea proceselor si urmarirea utilizarii

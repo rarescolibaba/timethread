@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace @interface
+namespace ProcessDataLib
 {
     /// <summary>
     /// Reprezinta un proces cu datele sale de utilizare

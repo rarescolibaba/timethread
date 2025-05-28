@@ -12,8 +12,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ProcessDataLib;
 
-namespace @interface
+namespace UsageDataServiceLib
 {  
     /// <summary>
     /// Clasa de servicii pentru gestionarea persistentei si preluarii datelor despre utilizarea proceselor

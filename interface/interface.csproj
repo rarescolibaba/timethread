@@ -56,14 +56,11 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <Compile Include="ProcessData.cs" />
-    <Compile Include="ProcessMonitor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StatsPanel.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="UsageDataService.cs" />
     <Compile Include="UsageGraph.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -96,6 +93,20 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ProcessDataLib\ProcessDataLib.csproj">
+      <Project>{2167c3b2-98e7-484d-9137-a5a5b0ca30a5}</Project>
+      <Name>ProcessDataLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ProcessMonitorLib\ProcessMonitorLib.csproj">
+      <Project>{5a11e272-d2d8-4059-a3cc-f1058948722e}</Project>
+      <Name>ProcessMonitorLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\UsageDataServiceLib\UsageDataServiceLib.csproj">
+      <Project>{873805d8-d1d0-4d6c-8ede-03d350788bf8}</Project>
+      <Name>UsageDataServiceLib</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
