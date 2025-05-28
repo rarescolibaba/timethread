@@ -47,6 +47,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj">
+      <Project>{c2b18e7c-d6df-43b3-a615-2b7e42f1cce0}</Project>
+      <Name>Common</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ProcessDataLib\ProcessDataLib.csproj">
       <Project>{2167c3b2-98e7-484d-9137-a5a5b0ca30a5}</Project>
       <Name>ProcessDataLib</Name>

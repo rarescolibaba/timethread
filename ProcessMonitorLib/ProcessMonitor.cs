@@ -30,6 +30,7 @@ using System.Linq;
 using System.Management;
 using System.Threading;
 using UsageDataServiceLib;
+using Common;
 
 namespace ProcessMonitorLib
 {
@@ -200,7 +201,7 @@ namespace ProcessMonitorLib
                     }
                     catch (Exception ex)
                     {
-                        // Procesul poate sa fi iesit, il sarim
+                        Logger.Log(new ProcessMonitorException("Error in MonitorProcesses.", ex), "MonitorProcesses");
                     }
                 }
 
@@ -224,7 +225,7 @@ namespace ProcessMonitorLib
             }
             catch (Exception ex)
             {
-                LogException("MonitorProcesses", ex);
+                Logger.Log(new ProcessMonitorException("Error in MonitorProcesses.", ex), "MonitorProcesses");
             }
         }
 
@@ -261,7 +262,7 @@ namespace ProcessMonitorLib
             }
             catch (Exception ex)
             {
-                LogException("AddNewProcess", ex);
+                Logger.Log(new ProcessMonitorException("Failed to add new process.", ex), "AddNewProcess");
             }
         }
 
@@ -324,7 +325,7 @@ namespace ProcessMonitorLib
             }
             catch (Exception ex)
             {
-                LogException("UpdateProcessData", ex);
+                Logger.Log(new ProcessMonitorException("Failed to update process data.", ex), "UpdateProcessData");
                 return false;
             }
         }
@@ -365,23 +366,30 @@ namespace ProcessMonitorLib
         /// </summary>
         public void SetProcessCategory(string processName, string category)
         {
-            List<ProcessData> updatedProcesses = new List<ProcessData>();
-            lock (_lock)
+            try
             {
-                _processCategories[processName] = category;
-
-                // Actualizam categoriile pentru procesele existente
-                foreach (var process in _processes.Values.Where(p => p.Name.Contains(processName)))
+                List<ProcessData> updatedProcesses = new List<ProcessData>();
+                lock (_lock)
                 {
-                    process.Department = category;
-                    updatedProcesses.Add(process);
+                    _processCategories[processName] = category;
+
+                    // Actualizam categoriile pentru procesele existente
+                    foreach (var process in _processes.Values.Where(p => p.Name.Contains(processName)))
+                    {
+                        process.Department = category;
+                        updatedProcesses.Add(process);
+                    }
+                }
+                if (updatedProcesses.Count > 0)
+                {
+                    _processDataChangedSinceLastSave = true;
+                    //notify once for all updated processes
+                    SafeNotifyProcessesUpdated(updatedProcesses);
                 }
             }
-            if (updatedProcesses.Count > 0)
+            catch (Exception ex)
             {
-                _processDataChangedSinceLastSave = true;
-                // Batch notification: notify once for all updated processes
-                SafeNotifyProcessesUpdated(updatedProcesses);
+                Logger.Log(new ProcessMonitorException("Failed to set process category.", ex), "SetProcessCategory");
             }
         }
 
@@ -400,7 +408,7 @@ namespace ProcessMonitorLib
                 }
                 catch (Exception ex)
                 {
-                    LogException("SafeNotifyProcessesUpdated", ex);
+                    Logger.Log(new ProcessMonitorException("Error in SafeNotifyProcessesUpdated.", ex), "SafeNotifyProcessesUpdated");
                 }
             }
         }
@@ -453,7 +461,7 @@ namespace ProcessMonitorLib
             }
             catch (Exception ex) // Exceptie generala pentru metoda
             {
-                Console.WriteLine($"Error in SaveDataToCSV (ProcessMonitor): {ex.Message}");
+                Logger.Log(new ProcessMonitorException("Error in SaveDataToCSV.", ex), "SaveDataToCSV");
             }
         }
 
@@ -475,8 +483,7 @@ namespace ProcessMonitorLib
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting last boot up time: {ex.Message}");
-                // In unele cazuri, poti loga sau trata mai detaliat
+                Logger.Log(new ProcessMonitorException("Error getting last boot up time.", ex), "GetLastBootUpTime");
             }
             return DateTime.MinValue; // Nu ar trebui sa se intample in mod normal
         }
@@ -505,7 +512,7 @@ namespace ProcessMonitorLib
             foreach (var process in snapshot)
             {
                 try { observer.OnProcessAdded(process); }
-                catch (Exception ex) { LogException("Subscribe.OnProcessAdded", ex); }
+                catch (Exception ex) { Logger.Log(new ProcessMonitorException("Error in Subscribe.OnProcessAdded.", ex), "Subscribe.OnProcessAdded"); }
             }
         }
 
@@ -532,7 +539,7 @@ namespace ProcessMonitorLib
             foreach (var observer in GetLiveObservers())
             {
                 try { observer.OnProcessAdded(process); }
-                catch (Exception ex) { LogException("SafeNotifyProcessAdded", ex); }
+                catch (Exception ex) { Logger.Log(new ProcessMonitorException("Error in SafeNotifyProcessAdded.", ex), "SafeNotifyProcessAdded"); }
             }
         }
 
@@ -541,7 +548,7 @@ namespace ProcessMonitorLib
             foreach (var observer in GetLiveObservers())
             {
                 try { observer.OnProcessRemoved(pid); }
-                catch (Exception ex) { LogException("SafeNotifyProcessRemoved", ex); }
+                catch (Exception ex) { Logger.Log(new ProcessMonitorException("Error in SafeNotifyProcessRemoved.", ex), "SafeNotifyProcessRemoved"); }
             }
         }
 
@@ -550,7 +557,7 @@ namespace ProcessMonitorLib
             foreach (var observer in GetLiveObservers())
             {
                 try { observer.OnProcessUpdated(process); }
-                catch (Exception ex) { LogException("SafeNotifyProcessUpdated", ex); }
+                catch (Exception ex) { Logger.Log(new ProcessMonitorException("Error in SafeNotifyProcessUpdated.", ex), "SafeNotifyProcessUpdated"); }
             }
         }
 

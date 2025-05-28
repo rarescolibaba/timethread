@@ -19,6 +19,7 @@ using ProcessDataLib;
 using ProcessMonitorLib;
 using UsageDataServiceLib;
 using @interface; // for Utils
+using Common;
 
 namespace @interface
 {
@@ -69,6 +70,7 @@ namespace @interface
             }
             catch (Exception ex)
             {
+                Logger.Log(new UIException("Error initializing application.", ex), "Form1.ctor");
                 MessageBox.Show($"Error initializing application: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -78,14 +80,21 @@ namespace @interface
         /// </summary>
         private void UpdateTimer_Tick(object sender, EventArgs e)
         {
-            LoadRealProcessData();
-            // Update stats panel with current uptime if no process is selected
-            if (_selectedProcess == null && (_selectedCategoryForGraph == null || _selectedCategoryForGraph == "All"))
+            try
             {
-                TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
-                _statsPanel.UpdateSystemUptime(uptime);
+                LoadRealProcessData();
+                // Update stats panel with current uptime if no process is selected
+                if (_selectedProcess == null && (_selectedCategoryForGraph == null || _selectedCategoryForGraph == "All"))
+                {
+                    TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
+                    _statsPanel.UpdateSystemUptime(uptime);
+                }
+                // else the stats panel is updated by ProcessListView_SelectedIndexChanged or CategorySelector_CategorySelected
             }
-            // else the stats panel is updated by ProcessListView_SelectedIndexChanged or CategorySelector_CategorySelected
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error in UpdateTimer_Tick.", ex), "UpdateTimer_Tick");
+            }
         }
 
         /// <summary>
@@ -93,51 +102,59 @@ namespace @interface
         /// </summary>
         private void InitializeControls()
         {
-            // Create the usage graph
-            _usageGraph = new UsageGraph
+            try
             {
-                Location = new Point(10, 10),
-                Size = new Size(550, 250),
-                Title = "Usage Over Time",
-                TimeRange = "1 month"
-            };
+                // Create the usage graph
+                _usageGraph = new UsageGraph
+                {
+                    Location = new Point(10, 10),
+                    Size = new Size(550, 250),
+                    Title = "Usage Over Time",
+                    TimeRange = "1 month"
+                };
 
-            // Create the process list view
-            _processListView = new ListView
+                // Create the process list view
+                _processListView = new ListView
+                {
+                    Location = new Point(10, 270),
+                    Size = new Size(550, 280),
+                    View = View.Details,
+                    FullRowSelect = true,
+                    GridLines = true
+                };
+
+                _processListView.Columns.Add("Name", 200);
+                _processListView.Columns.Add("PID", 70);
+                _processListView.Columns.Add("Dept", 100);
+                _processListView.Columns.Add("Today", 80, HorizontalAlignment.Right);
+                _processListView.SelectedIndexChanged += ProcessListView_SelectedIndexChanged;
+
+                // Create the category selector
+                _categorySelector = new CategorySelector
+                {
+                    Location = new Point(570, 10),
+                    Size = new Size(200, 280), 
+                    Categories = new List<string> { "Games", "Learning", "Coding", "Entertainment", "Other" }
+                };
+                _categorySelector.CategorySelected += CategorySelector_CategorySelected;
+                _categorySelector.HelpButtonClicked += CategorySelector_HelpButtonClicked; 
+                // Create the stats panel
+                _statsPanel = new StatsPanel
+                {
+                    Location = new Point(570, 300), 
+                    Size = new Size(200, 250) 
+                };
+
+                Controls.Add(_usageGraph);
+                Controls.Add(_processListView);
+                Controls.Add(_categorySelector);
+                Controls.Add(_statsPanel);
+            }
+            catch (Exception ex)
             {
-                Location = new Point(10, 270),
-                Size = new Size(550, 280),
-                View = View.Details,
-                FullRowSelect = true,
-                GridLines = true
-            };
-
-            _processListView.Columns.Add("Name", 200);
-            _processListView.Columns.Add("PID", 70);
-            _processListView.Columns.Add("Dept", 100);
-            _processListView.Columns.Add("Today", 80, HorizontalAlignment.Right);
-            _processListView.SelectedIndexChanged += ProcessListView_SelectedIndexChanged;
-
-            // Create the category selector
-            _categorySelector = new CategorySelector
-            {
-                Location = new Point(570, 10),
-                Size = new Size(200, 280), 
-                Categories = new List<string> { "Games", "Learning", "Coding", "Entertainment", "Other" }
-            };
-            _categorySelector.CategorySelected += CategorySelector_CategorySelected;
-            _categorySelector.HelpButtonClicked += CategorySelector_HelpButtonClicked; 
-            // Create the stats panel
-            _statsPanel = new StatsPanel
-            {
-                Location = new Point(570, 300), 
-                Size = new Size(200, 250) 
-            };
-
-            Controls.Add(_usageGraph);
-            Controls.Add(_processListView);
-            Controls.Add(_categorySelector);
-            Controls.Add(_statsPanel);
+                Logger.Log(new UIException("Error initializing controls.", ex), "InitializeControls");
+                MessageBox.Show($"Error initializing controls: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         /// <summary>
@@ -145,10 +162,17 @@ namespace @interface
         /// </summary>
         private void LoadRealProcessData()
         {
-            if (_processMonitor != null) 
+            try
             {
-                _processData = _processMonitor.ProcessData;
-                UpdateProcessList();
+                if (_processMonitor != null) 
+                {
+                    _processData = _processMonitor.ProcessData;
+                    UpdateProcessList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error loading real process data.", ex), "LoadRealProcessData");
             }
         }
 
@@ -157,40 +181,47 @@ namespace @interface
         /// </summary>
         private void UpdateProcessList()
         {
-            if (_processListView == null || _processData == null || _categorySelector == null) return; 
-
-            _processListView.BeginUpdate();
-            _processListView.Items.Clear();
-            List<ProcessData> filteredProcesses = _processData;
-
-            if (_categorySelector.SelectedCategory != "All")
+            try
             {
-                filteredProcesses = _processData.Where(p => p.Department == _categorySelector.SelectedCategory).ToList();
-            }
+                if (_processListView == null || _processData == null || _categorySelector == null) return; 
 
-            foreach (ProcessData process in filteredProcesses)
-            {
-                ListViewItem item = new ListViewItem(process.Name);
-                item.SubItems.Add(process.PID.ToString());
-                item.SubItems.Add(process.Department);
-                item.SubItems.Add(Utils.FormatTimeSpan(process.TimeToday));
-                item.Tag = process;
-                _processListView.Items.Add(item);
-            }
+                _processListView.BeginUpdate();
+                _processListView.Items.Clear();
+                List<ProcessData> filteredProcesses = _processData;
 
-            if (_selectedProcess != null)
-            {
-                foreach (ListViewItem item in _processListView.Items)
+                if (_categorySelector.SelectedCategory != "All")
                 {
-                    ProcessData process = item.Tag as ProcessData;
-                    if (process != null && process.PID == _selectedProcess.PID)
+                    filteredProcesses = _processData.Where(p => p.Department == _categorySelector.SelectedCategory).ToList();
+                }
+
+                foreach (ProcessData process in filteredProcesses)
+                {
+                    ListViewItem item = new ListViewItem(process.Name);
+                    item.SubItems.Add(process.PID.ToString());
+                    item.SubItems.Add(process.Department);
+                    item.SubItems.Add(Utils.FormatTimeSpan(process.TimeToday));
+                    item.Tag = process;
+                    _processListView.Items.Add(item);
+                }
+
+                if (_selectedProcess != null)
+                {
+                    foreach (ListViewItem item in _processListView.Items)
                     {
-                        item.Selected = true;
-                        break;
+                        ProcessData process = item.Tag as ProcessData;
+                        if (process != null && process.PID == _selectedProcess.PID)
+                        {
+                            item.Selected = true;
+                            break;
+                        }
                     }
                 }
+                _processListView.EndUpdate();
             }
-            _processListView.EndUpdate();
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error updating process list.", ex), "UpdateProcessList");
+            }
         }
 
         private string FormatTimeSpan(TimeSpan time)
@@ -200,65 +231,72 @@ namespace @interface
 
         private void UpdateGraphView()
         {
-            if (_usageGraph == null || _dataService == null) return; 
-
-            List<KeyValuePair<DateTime, double>> graphData = new List<KeyValuePair<DateTime, double>>();
-            string graphTitle = "PC Usage Data";
-
-            switch (_currentGraphView)
+            try
             {
-                case "PROCESS":
-                    if (_selectedProcess != null)
-                    {
-                        graphTitle = $"{_selectedProcess.Name} Usage (Active+Idle Time)"; 
-                        graphData = _dataService.GetHistoricalDataForProcess(_selectedProcess.Name, DisplayDays);
-                    }
-                    else
-                    {
-                        _currentGraphView = "TOTAL_PC_ON_TIME";
-                        UpdateGraphView();
-                        return;
-                    }
-                    break;
+                if (_usageGraph == null || _dataService == null) return; 
 
-                case "CATEGORY":
-                    if (!string.IsNullOrEmpty(_selectedCategoryForGraph) && _selectedCategoryForGraph != "All")
-                    {
-                        graphTitle = $"{_selectedCategoryForGraph} Category (Total Active Time)";
-                        graphData = _dataService.GetTotalActiveTimeForCategory(_selectedCategoryForGraph, DisplayDays);
-                    }
-                    else
-                    {
-                        _currentGraphView = "TOTAL_PC_ON_TIME";
-                        _selectedCategoryForGraph = null;
-                        UpdateGraphView();
-                        return;
-                    }
-                    break;
+                List<KeyValuePair<DateTime, double>> graphData = new List<KeyValuePair<DateTime, double>>();
+                string graphTitle = "PC Usage Data";
 
-                case "TOTAL_PC_ON_TIME":
-                default:
-                    graphTitle = "Total PC On Time (Persisted)";
-                    graphData = _dataService.GetPersistedDailySystemOnTime(DisplayDays);
-                    _currentGraphView = "TOTAL_PC_ON_TIME";
-                    break;
-            }
-
-            _usageGraph.Title = graphTitle;
-            if (graphData.Any() && graphData.Any(d => d.Value > 0.001))
-            {
-                _usageGraph.TimeData = graphData;
-            }
-            else
-            {
-                List<KeyValuePair<DateTime, double>> emptyTimeline = new List<KeyValuePair<DateTime, double>>();
-                for (int i = 0; i < DisplayDays; i++)
+                switch (_currentGraphView)
                 {
-                    emptyTimeline.Add(new KeyValuePair<DateTime, double>(DateTime.Today.AddDays(-(DisplayDays - 1) + i), 0));
+                    case "PROCESS":
+                        if (_selectedProcess != null)
+                        {
+                            graphTitle = $"{_selectedProcess.Name} Usage (Active+Idle Time)"; 
+                            graphData = _dataService.GetHistoricalDataForProcess(_selectedProcess.Name, DisplayDays);
+                        }
+                        else
+                        {
+                            _currentGraphView = "TOTAL_PC_ON_TIME";
+                            UpdateGraphView();
+                            return;
+                        }
+                        break;
+
+                    case "CATEGORY":
+                        if (!string.IsNullOrEmpty(_selectedCategoryForGraph) && _selectedCategoryForGraph != "All")
+                        {
+                            graphTitle = $"{_selectedCategoryForGraph} Category (Total Active Time)";
+                            graphData = _dataService.GetTotalActiveTimeForCategory(_selectedCategoryForGraph, DisplayDays);
+                        }
+                        else
+                        {
+                            _currentGraphView = "TOTAL_PC_ON_TIME";
+                            _selectedCategoryForGraph = null;
+                            UpdateGraphView();
+                            return;
+                        }
+                        break;
+
+                    case "TOTAL_PC_ON_TIME":
+                    default:
+                        graphTitle = "Total PC On Time (Persisted)";
+                        graphData = _dataService.GetPersistedDailySystemOnTime(DisplayDays);
+                        _currentGraphView = "TOTAL_PC_ON_TIME";
+                        break;
                 }
-                _usageGraph.TimeData = emptyTimeline;
+
+                _usageGraph.Title = graphTitle;
+                if (graphData.Any() && graphData.Any(d => d.Value > 0.001))
+                {
+                    _usageGraph.TimeData = graphData;
+                }
+                else
+                {
+                    List<KeyValuePair<DateTime, double>> emptyTimeline = new List<KeyValuePair<DateTime, double>>();
+                    for (int i = 0; i < DisplayDays; i++)
+                    {
+                        emptyTimeline.Add(new KeyValuePair<DateTime, double>(DateTime.Today.AddDays(-(DisplayDays - 1) + i), 0));
+                    }
+                    _usageGraph.TimeData = emptyTimeline;
+                }
+                Console.WriteLine($"Graph updated: {graphTitle} with {graphData.Count} points. View: {_currentGraphView}");
             }
-            Console.WriteLine($"Graph updated: {graphTitle} with {graphData.Count} points. View: {_currentGraphView}");
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error updating graph view.", ex), "UpdateGraphView");
+            }
         }
 
         /// <summary>
@@ -266,32 +304,39 @@ namespace @interface
         /// </summary>
         private void ProcessListView_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (_processListView.SelectedItems.Count > 0)
+            try
             {
-                ListViewItem item = _processListView.SelectedItems[0];
-                _selectedProcess = item.Tag as ProcessData;
-                _selectedCategoryForGraph = null;
-                _currentGraphView = "PROCESS";
-                UpdateGraphView();
-                if (_statsPanel != null && _selectedProcess != null)
+                if (_processListView.SelectedItems.Count > 0)
                 {
-                    _statsPanel.UpdateStats(_selectedProcess);
+                    ListViewItem item = _processListView.SelectedItems[0];
+                    _selectedProcess = item.Tag as ProcessData;
+                    _selectedCategoryForGraph = null;
+                    _currentGraphView = "PROCESS";
+                    UpdateGraphView();
+                    if (_statsPanel != null && _selectedProcess != null)
+                    {
+                        _statsPanel.UpdateStats(_selectedProcess);
+                    }
+                }
+                else
+                {
+                    _selectedProcess = null;
+                    if (string.IsNullOrEmpty(_selectedCategoryForGraph) || _selectedCategoryForGraph == "All")
+                    {
+                        _currentGraphView = "TOTAL_PC_ON_TIME";
+                    }
+                    UpdateGraphView();
+                    if (_statsPanel != null) 
+                    {
+                        _statsPanel.ClearStats();
+                        TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
+                        _statsPanel.UpdateSystemUptime(uptime);
+                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                _selectedProcess = null;
-                if (string.IsNullOrEmpty(_selectedCategoryForGraph) || _selectedCategoryForGraph == "All")
-                {
-                    _currentGraphView = "TOTAL_PC_ON_TIME";
-                }
-                UpdateGraphView();
-                if (_statsPanel != null) 
-                {
-                    _statsPanel.ClearStats();
-                    TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
-                    _statsPanel.UpdateSystemUptime(uptime);
-                }
+                Logger.Log(new UIException("Error in ProcessListView_SelectedIndexChanged.", ex), "ProcessListView_SelectedIndexChanged");
             }
         }
 
@@ -300,34 +345,41 @@ namespace @interface
         /// </summary>
         private void CategorySelector_CategorySelected(object sender, string category)
         {
-            // Reaplica filtrul
-            UpdateProcessList();
-            _selectedProcess = null;
-            if (_processListView != null) _processListView.SelectedItems.Clear();
+            try
+            {
+                // Reaplica filtrul
+                UpdateProcessList();
+                _selectedProcess = null;
+                if (_processListView != null) _processListView.SelectedItems.Clear();
 
-            if (!string.IsNullOrEmpty(category) && category != "All")
-            {
-                _selectedCategoryForGraph = category;
-                _currentGraphView = "CATEGORY";
-                if (_statsPanel != null && _dataService != null) 
+                if (!string.IsNullOrEmpty(category) && category != "All")
                 {
-                    var categoryDataToday = _dataService.GetTotalActiveTimeForCategory(category, 1);
-                    double totalMinutesToday = categoryDataToday.Any() ? categoryDataToday.First().Value * 60 : 0;
-                    _statsPanel.UpdateCategoryStats(category, totalMinutesToday);
+                    _selectedCategoryForGraph = category;
+                    _currentGraphView = "CATEGORY";
+                    if (_statsPanel != null && _dataService != null) 
+                    {
+                        var categoryDataToday = _dataService.GetTotalActiveTimeForCategory(category, 1);
+                        double totalMinutesToday = categoryDataToday.Any() ? categoryDataToday.First().Value * 60 : 0;
+                        _statsPanel.UpdateCategoryStats(category, totalMinutesToday);
+                    }
                 }
-            }
-            else
-            {
-                _selectedCategoryForGraph = null;
-                _currentGraphView = "TOTAL_PC_ON_TIME";
-                if (_statsPanel != null) 
+                else
                 {
-                    _statsPanel.ClearStats();
-                    TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
-                    _statsPanel.UpdateSystemUptime(uptime);
+                    _selectedCategoryForGraph = null;
+                    _currentGraphView = "TOTAL_PC_ON_TIME";
+                    if (_statsPanel != null) 
+                    {
+                        _statsPanel.ClearStats();
+                        TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
+                        _statsPanel.UpdateSystemUptime(uptime);
+                    }
                 }
+                UpdateGraphView();
             }
-            UpdateGraphView();
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error in CategorySelector_CategorySelected.", ex), "CategorySelector_CategorySelected");
+            }
         }
 
         /// <summary>
@@ -352,6 +404,7 @@ namespace @interface
             }
             catch (Exception ex)
             {
+                Logger.Log(new UIException("Error opening help.", ex), "CategorySelector_HelpButtonClicked");
                 MessageBox.Show($"A apărut o eroare la deschiderea fișierului de ajutor:\n{ex.Message}",
                                 "Eroare Ajutor", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -362,9 +415,16 @@ namespace @interface
         /// </summary>
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            base.OnFormClosing(e);
-            if (_updateTimer != null) _updateTimer.Stop(); 
-            if (_processMonitor != null) _processMonitor.StopMonitoring(); 
+            try
+            {
+                base.OnFormClosing(e);
+                if (_updateTimer != null) _updateTimer.Stop(); 
+                if (_processMonitor != null) _processMonitor.StopMonitoring(); 
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error during form closing.", ex), "OnFormClosing");
+            }
         }
 
         /// <summary>
@@ -372,19 +432,26 @@ namespace @interface
         /// </summary>
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
+            try
             {
-                if (_processMonitor != null)
+                if (disposing)
                 {
-                    _processMonitor.Unsubscribe(this);
+                    if (_processMonitor != null)
+                    {
+                        _processMonitor.Unsubscribe(this);
+                    }
+                    if (components != null)
+                    {
+                        components.Dispose();
+                    }
+                    // Eliberare resurse suplimentare, daca este cazul
                 }
-                if (components != null)
-                {
-                    components.Dispose();
-                }
-                // Eliberare resurse suplimentare, daca este cazul
+                base.Dispose(disposing);
             }
-            base.Dispose(disposing);
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error during Dispose.", ex), "Dispose");
+            }
         }
 
         /// <summary>
@@ -392,12 +459,19 @@ namespace @interface
         /// </summary>
         public void OnProcessAdded(ProcessData process)
         {
-            BeginInvoke((Action)(() =>
+            try
             {
-                // Only add if it matches the current filter
-                if (IsProcessVisibleInCurrentCategory(process))
-                    AddOrUpdateProcessInList(process);
-            }));
+                BeginInvoke((Action)(() =>
+                {
+                    // Only add if it matches the current filter
+                    if (IsProcessVisibleInCurrentCategory(process))
+                        AddOrUpdateProcessInList(process);
+                }));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error in OnProcessAdded.", ex), "OnProcessAdded");
+            }
         }
 
         /// <summary>
@@ -405,10 +479,17 @@ namespace @interface
         /// </summary>
         public void OnProcessRemoved(int pid)
         {
-            BeginInvoke((Action)(() =>
+            try
             {
-                RemoveProcessFromList(pid);
-            }));
+                BeginInvoke((Action)(() =>
+                {
+                    RemoveProcessFromList(pid);
+                }));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error in OnProcessRemoved.", ex), "OnProcessRemoved");
+            }
         }
 
         /// <summary>
@@ -416,14 +497,21 @@ namespace @interface
         /// </summary>
         public void OnProcessUpdated(ProcessData process)
         {
-            BeginInvoke((Action)(() =>
+            try
             {
-                // Only update if it matches the current filter
-                if (IsProcessVisibleInCurrentCategory(process))
-                    AddOrUpdateProcessInList(process);
-                else
-                    RemoveProcessFromList(process.PID);
-            }));
+                BeginInvoke((Action)(() =>
+                {
+                    // Only update if it matches the current filter
+                    if (IsProcessVisibleInCurrentCategory(process))
+                        AddOrUpdateProcessInList(process);
+                    else
+                        RemoveProcessFromList(process.PID);
+                }));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error in OnProcessUpdated.", ex), "OnProcessUpdated");
+            }
         }
 
         /// <summary>
@@ -438,51 +526,65 @@ namespace @interface
 
         private void AddOrUpdateProcessInList(ProcessData process)
         {
-            if (_processListView == null) return;
-            // Incercam gasirea in lista
-            ListViewItem found = null;
-            foreach (ListViewItem item in _processListView.Items)
+            try
             {
-                if (item.Tag is ProcessData pd && pd.PID == process.PID)
+                if (_processListView == null) return;
+                // Incercam gasirea in lista
+                ListViewItem found = null;
+                foreach (ListViewItem item in _processListView.Items)
                 {
-                    found = item;
-                    break;
+                    if (item.Tag is ProcessData pd && pd.PID == process.PID)
+                    {
+                        found = item;
+                        break;
+                    }
+                }
+                if (found != null)
+                {
+                    // Update
+                    found.Text = process.Name;
+                    found.SubItems[1].Text = process.PID.ToString();
+                    found.SubItems[2].Text = process.Department;
+                    found.SubItems[3].Text = Utils.FormatTimeSpan(process.TimeToday);
+                    found.Tag = process;
+                }
+                else
+                {
+                    // Add only if it matches the current filter
+                    if (IsProcessVisibleInCurrentCategory(process))
+                    {
+                        ListViewItem newItem = new ListViewItem(process.Name);
+                        newItem.SubItems.Add(process.PID.ToString());
+                        newItem.SubItems.Add(process.Department);
+                        newItem.SubItems.Add(Utils.FormatTimeSpan(process.TimeToday));
+                        newItem.Tag = process;
+                        _processListView.Items.Add(newItem);
+                    }
                 }
             }
-            if (found != null)
+            catch (Exception ex)
             {
-                // Update
-                found.Text = process.Name;
-                found.SubItems[1].Text = process.PID.ToString();
-                found.SubItems[2].Text = process.Department;
-                found.SubItems[3].Text = Utils.FormatTimeSpan(process.TimeToday);
-                found.Tag = process;
-            }
-            else
-            {
-                // Add only if it matches the current filter
-                if (IsProcessVisibleInCurrentCategory(process))
-                {
-                    ListViewItem newItem = new ListViewItem(process.Name);
-                    newItem.SubItems.Add(process.PID.ToString());
-                    newItem.SubItems.Add(process.Department);
-                    newItem.SubItems.Add(Utils.FormatTimeSpan(process.TimeToday));
-                    newItem.Tag = process;
-                    _processListView.Items.Add(newItem);
-                }
+                Logger.Log(new UIException("Error in AddOrUpdateProcessInList.", ex), "AddOrUpdateProcessInList");
             }
         }
 
         private void RemoveProcessFromList(int pid)
         {
-            if (_processListView == null) return;
-            foreach (ListViewItem item in _processListView.Items)
+            try
             {
-                if (item.Tag is ProcessData pd && pd.PID == pid)
+                if (_processListView == null) return;
+                foreach (ListViewItem item in _processListView.Items)
                 {
-                    _processListView.Items.Remove(item);
-                    break;
+                    if (item.Tag is ProcessData pd && pd.PID == pid)
+                    {
+                        _processListView.Items.Remove(item);
+                        break;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error in RemoveProcessFromList.", ex), "RemoveProcessFromList");
             }
         }
     }

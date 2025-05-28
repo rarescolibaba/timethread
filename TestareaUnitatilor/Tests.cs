@@ -104,7 +104,7 @@ namespace TestareaUnitatilor
 
 
         /// <summary>
-        /// testeaza daca metoda GetIdleTime calculeaza și returneaza corect 30% din valoarea proprietatii TimeToday
+        /// testeaza metoda GetIdleTime calculeaza și returneaza corect 30% din valoarea proprietatii TimeToday
         /// </summary>
         [TestMethod]
         public void GetIdleTime_WhenTimeTodayIsSet_ShouldReturn30PercentOfTimeToday()
@@ -287,7 +287,7 @@ namespace TestareaUnitatilor
             var monitor = new ProcessMonitor();
             Thread.Sleep(6000); 
 
-            var processes = monitor.GetProcessData();
+            var processes = monitor.ProcessData;
 
             Assert.IsNotNull(processes);
             Assert.IsTrue(processes.Count > 0);
@@ -303,7 +303,7 @@ namespace TestareaUnitatilor
             var monitor = new ProcessMonitor();
             Thread.Sleep(6000); 
 
-            var processes = monitor.GetProcessData();
+            var processes = monitor.ProcessData;
             var firstProcess = processes.FirstOrDefault();
 
             if (firstProcess != null)
@@ -311,7 +311,7 @@ namespace TestareaUnitatilor
                 string originalCategory = firstProcess.Department;
                 monitor.SetProcessCategory(firstProcess.Name, "TestCategory");
 
-                var updatedProcess = monitor.GetProcessData().FirstOrDefault(p => p.PID == firstProcess.PID);
+                var updatedProcess = monitor.ProcessData.FirstOrDefault(p => p.PID == firstProcess.PID);
                 Assert.AreEqual("TestCategory", updatedProcess.Department);
             }
         }
@@ -366,9 +366,9 @@ namespace TestareaUnitatilor
             var monitor = new ProcessMonitor();
             Thread.Sleep(6000);
 
-            var processes1 = monitor.GetProcessData();
+            var processes1 = monitor.ProcessData;
             Thread.Sleep(6000);
-            var processes2 = monitor.GetProcessData();
+            var processes2 = monitor.ProcessData;
 
             var pids1 = processes1.Select(p => p.PID).ToHashSet();
             var pids2 = processes2.Select(p => p.PID).ToHashSet();

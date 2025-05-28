@@ -8,7 +8,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
-using System.Reflection; 
+using System.Reflection;
+using Common;
 
 namespace @interface
 {
@@ -84,80 +85,100 @@ namespace @interface
         /// </summary>
         private void CreateCategoryButtons()
         {
-            List<Control> controlsToRemove = new List<Control>();
-            foreach (Control control in Controls)
+            try
             {
-                if (control is Button) 
+                List<Control> controlsToRemove = new List<Control>();
+                foreach (Control control in Controls)
                 {
-                    controlsToRemove.Add(control);
+                    if (control is Button) 
+                    {
+                        controlsToRemove.Add(control);
+                    }
                 }
+                foreach (Control control in controlsToRemove)
+                {
+                    Controls.Remove(control);
+                    control.Dispose();
+                }
+
+                AddCategoryButton("All", 0);
+
+                for (int i = 0; i < _categories.Count; i++)
+                {
+                    AddCategoryButton(_categories[i], i + 1);
+                }
+
+                int helpButtonYPosition = 30 + ((_categories.Count > 0 ? _categories.Count : 0) + 1) * 35; 
+
+                _helpButton = new Button
+                {
+                    Text = "Help",
+                    Tag = "HelpButton", 
+                    Width = 100,
+                    Height = 30,
+                    Location = new Point(10, helpButtonYPosition),
+                    FlatStyle = FlatStyle.System 
+                };
+                _helpButton.Click += HelpButton_Click;
+                Controls.Add(_helpButton);
+
+                UpdateButtonStates();
             }
-            foreach (Control control in controlsToRemove)
+            catch (Exception ex)
             {
-                Controls.Remove(control);
-                control.Dispose();
+                Logger.Log(new UIException("Error creating category buttons.", ex), "CategorySelector.CreateCategoryButtons");
             }
-
-            AddCategoryButton("All", 0);
-
-            for (int i = 0; i < _categories.Count; i++)
-            {
-                AddCategoryButton(_categories[i], i + 1);
-            }
-
-            int helpButtonYPosition = 30 + ((_categories.Count > 0 ? _categories.Count : 0) + 1) * 35; 
-
-            _helpButton = new Button
-            {
-                Text = "Help",
-                Tag = "HelpButton", 
-                Width = 100,
-                Height = 30,
-                Location = new Point(10, helpButtonYPosition),
-                FlatStyle = FlatStyle.System 
-            };
-            _helpButton.Click += HelpButton_Click;
-            Controls.Add(_helpButton);
-
-
-            UpdateButtonStates();
         }
 
         private void AddCategoryButton(string category, int index)
         {
-            Button button = new Button
+            try
             {
-                Text = category,
-                Tag = category,
-                Width = 100,
-                Height = 30,
-                Location = new Point(10, 30 + (index * 35)),
-                FlatStyle = FlatStyle.Flat
-            };
+                Button button = new Button
+                {
+                    Text = category,
+                    Tag = category,
+                    Width = 100,
+                    Height = 30,
+                    Location = new Point(10, 30 + (index * 35)),
+                    FlatStyle = FlatStyle.Flat
+                };
 
-            button.Click += CategoryButton_Click;
-            Controls.Add(button);
+                button.Click += CategoryButton_Click;
+                Controls.Add(button);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error adding category button.", ex), "CategorySelector.AddCategoryButton");
+            }
         }
 
         private void UpdateButtonStates()
         {
-            foreach (Control control in Controls)
+            try
             {
-                if (control is Button button && button.Tag?.ToString() != "HelpButton") 
+                foreach (Control control in Controls)
                 {
-                    string category = button.Tag as string;
+                    if (control is Button button && button.Tag?.ToString() != "HelpButton") 
+                    {
+                        string category = button.Tag as string;
 
-                    if (category == _selectedCategory)
-                    {
-                        button.BackColor = SystemColors.Highlight;
-                        button.ForeColor = Color.White;
-                    }
-                    else
-                    {
-                        button.BackColor = SystemColors.Control;
-                        button.ForeColor = SystemColors.ControlText;
+                        if (category == _selectedCategory)
+                        {
+                            button.BackColor = SystemColors.Highlight;
+                            button.ForeColor = Color.White;
+                        }
+                        else
+                        {
+                            button.BackColor = SystemColors.Control;
+                            button.ForeColor = SystemColors.ControlText;
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error updating button states.", ex), "CategorySelector.UpdateButtonStates");
             }
         }
 
@@ -166,11 +187,18 @@ namespace @interface
         /// </summary>
         private void CategoryButton_Click(object sender, EventArgs e)
         {
-            if (sender is Button button)
+            try
             {
-                string category = button.Tag as string;
-                SelectedCategory = category;
-                CategorySelected?.Invoke(this, category);
+                if (sender is Button button)
+                {
+                    string category = button.Tag as string;
+                    SelectedCategory = category;
+                    CategorySelected?.Invoke(this, category);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error in category button click.", ex), "CategorySelector.CategoryButton_Click");
             }
         }
 
@@ -179,7 +207,14 @@ namespace @interface
         /// </summary>
         private void HelpButton_Click(object sender, EventArgs e)
         {
-            HelpButtonClicked?.Invoke(this, EventArgs.Empty);
+            try
+            {
+                HelpButtonClicked?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error in help button click.", ex), "CategorySelector.HelpButton_Click");
+            }
         }
     }
 }

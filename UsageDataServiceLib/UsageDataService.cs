@@ -29,6 +29,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ProcessDataLib;
+using Common;
 
 namespace UsageDataServiceLib
 {  
@@ -82,7 +83,7 @@ namespace UsageDataServiceLib
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error initializing UsageDataService: {ex.Message}");
+                Logger.Log(new UsageDataServiceException("Error initializing UsageDataService.", ex), "UsageDataService.ctor");
                 // Fallback to a more accessible location if there's an error
                 _dataFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), CSV_FILENAME);
                 _dailySystemOnTimeCsvPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), DAILY_ON_TIME_CSV_FILENAME);
@@ -105,7 +106,7 @@ namespace UsageDataServiceLib
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error creating empty data file {filePath}: {ex.Message}");
+                Logger.Log(new UsageDataServiceException($"Error creating empty data file {filePath}.", ex), "CreateEmptyDataFile");
             }
         }
         
@@ -126,24 +127,24 @@ namespace UsageDataServiceLib
         /// <param name="processes">List of processes to save</param>
         public void SaveProcessData(List<ProcessData> processes)
         {
-            // Salvam in fisier doar daca exista schimbari
-            if (_lastSavedProcessData != null && _lastSavedProcessData.Count == processes.Count)
-            {
-                bool same = true;
-                for (int i = 0; i < processes.Count; i++)
-                {
-                    if (processes[i].PID != _lastSavedProcessData[i].PID ||
-                        processes[i].TimeToday != _lastSavedProcessData[i].TimeToday)
-                    {
-                        same = false;
-                        break;
-                    }
-                }
-                if (same) return;
-            }
-
             try
             {
+                // Salvam in fisier doar daca exista schimbari
+                if (_lastSavedProcessData != null && _lastSavedProcessData.Count == processes.Count)
+                {
+                    bool same = true;
+                    for (int i = 0; i < processes.Count; i++)
+                    {
+                        if (processes[i].PID != _lastSavedProcessData[i].PID ||
+                            processes[i].TimeToday != _lastSavedProcessData[i].TimeToday)
+                        {
+                            same = false;
+                            break;
+                        }
+                    }
+                    if (same) return;
+                }
+
                 // Load all existing data
                 Dictionary<string, List<string>> existingDataByDate = new Dictionary<string, List<string>>();
                 List<string> headerLines = new List<string>();
@@ -287,8 +288,7 @@ namespace UsageDataServiceLib
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving process data: {ex.Message}");
-                // In a production app, log this error
+                Logger.Log(new UsageDataServiceException("Error saving process data.", ex), "SaveProcessData");
             }
         }
         
@@ -299,11 +299,11 @@ namespace UsageDataServiceLib
         /// <returns>Dictionary of process data keyed by ProcessName_PID</returns>
         private Dictionary<string, ProcessUsageRecord> GetProcessDataForDate(DateTime date)
         {
-            Dictionary<string, ProcessUsageRecord> result = new Dictionary<string, ProcessUsageRecord>();
-            if (!File.Exists(_dataFilePath)) return result;
-                
             try
             {
+                Dictionary<string, ProcessUsageRecord> result = new Dictionary<string, ProcessUsageRecord>();
+                if (!File.Exists(_dataFilePath)) return result;
+                    
                 string dateStr = date.ToString("yyyy-MM-dd");
                 using (StreamReader reader = new StreamReader(_dataFilePath))
                 {
@@ -344,12 +344,13 @@ namespace UsageDataServiceLib
                         }
                     }
                 }
+                return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error reading process data for date {date.ToShortDateString()}: {ex.Message}");
+                Logger.Log(new UsageDataServiceException("Error reading process data for date.", ex), "GetProcessDataForDate");
+                return new Dictionary<string, ProcessUsageRecord>();
             }
-            return result;
         }
         
         /// <summary>
@@ -360,13 +361,13 @@ namespace UsageDataServiceLib
         /// <returns>List of key value pairs with date and hours</returns>
         public List<KeyValuePair<DateTime, double>> GetHistoricalDataForProcess(string processName, int days)
         {
-            List<KeyValuePair<DateTime, double>> result = new List<KeyValuePair<DateTime, double>>();
-            
-            if (!File.Exists(_dataFilePath))
-                return result;
-                
             try
             {
+                List<KeyValuePair<DateTime, double>> result = new List<KeyValuePair<DateTime, double>>();
+                
+                if (!File.Exists(_dataFilePath))
+                    return result;
+                    
                 // Calculate start date
                 DateTime startDate = DateTime.Today.AddDays(-(days - 1));
                 
@@ -418,12 +419,13 @@ namespace UsageDataServiceLib
                         }
                     }
                 }
+                return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error reading historical data for process {processName}: {ex.Message}");
+                Logger.Log(new UsageDataServiceException("Error reading historical data for process.", ex), "GetHistoricalDataForProcess");
+                return new List<KeyValuePair<DateTime, double>>();
             }
-            return result;
         }
         
         /// <summary>
@@ -433,13 +435,13 @@ namespace UsageDataServiceLib
         /// <returns>List of key value pairs with date and hours</returns>
         public List<KeyValuePair<DateTime, double>> GetTotalPCUsageData(int days)
         {
-            List<KeyValuePair<DateTime, double>> result = new List<KeyValuePair<DateTime, double>>();
-            
-            if (!File.Exists(_dataFilePath))
-                return result;
-                
             try
             {
+                List<KeyValuePair<DateTime, double>> result = new List<KeyValuePair<DateTime, double>>();
+                
+                if (!File.Exists(_dataFilePath))
+                    return result;
+                    
                 // Calculate start date
                 DateTime startDate = DateTime.Today.AddDays(-(days - 1));
                 
@@ -509,14 +511,13 @@ namespace UsageDataServiceLib
                     
                     result[i] = new KeyValuePair<DateTime, double>(day, value);
                 }
+                return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error reading total PC usage data: {ex.Message}");
-                // In a production app, log this error
+                Logger.Log(new UsageDataServiceException("Error reading total PC usage data.", ex), "GetTotalPCUsageData");
+                return new List<KeyValuePair<DateTime, double>>();
             }
-            
-            return result;
         }
 
         /// <summary>
@@ -527,60 +528,68 @@ namespace UsageDataServiceLib
         /// <returns>List of KeyValuePair with date and total hours the system was on.</returns>
         public List<KeyValuePair<DateTime, double>> GetDailySystemOnTime(int days, DateTime lastBootTime)
         {
-            List<KeyValuePair<DateTime, double>> result = new List<KeyValuePair<DateTime, double>>();
-            DateTime today = DateTime.Today;
-
-            if (lastBootTime == DateTime.MinValue) // If boot time couldn't be determined
+            try
             {
+                List<KeyValuePair<DateTime, double>> result = new List<KeyValuePair<DateTime, double>>();
+                DateTime today = DateTime.Today;
+
+                if (lastBootTime == DateTime.MinValue) // If boot time couldn't be determined
+                {
+                    for (int i = 0; i < days; i++)
+                    {
+                        result.Add(new KeyValuePair<DateTime, double>(today.AddDays(-(days - 1) + i), 0));
+                    }
+                    return result;
+                }
+
                 for (int i = 0; i < days; i++)
                 {
-                    result.Add(new KeyValuePair<DateTime, double>(today.AddDays(-(days - 1) + i), 0));
+                    DateTime currentDate = today.AddDays(-(days - 1) + i);
+                    double hoursOn = 0;
+
+                    if (currentDate < lastBootTime.Date)
+                    {
+                        hoursOn = 0; // System was not on yet
+                    }
+                    else if (currentDate == lastBootTime.Date)
+                    {
+                        // If it's the boot day
+                        if (currentDate == today) // Booted today
+                        {
+                            hoursOn = (DateTime.Now - lastBootTime).TotalHours;
+                        }
+                        else // Booted on a previous day (this is the boot day)
+                        {
+                            hoursOn = (currentDate.AddDays(1) - lastBootTime).TotalHours;
+                        }
+                    }
+                    else if (currentDate > lastBootTime.Date && currentDate < today)
+                    {
+                        // Full day between boot day and today
+                        hoursOn = 24;
+                    }
+                    else if (currentDate == today)
+                    {
+                        // Today, and boot time was before today
+                        hoursOn = DateTime.Now.TimeOfDay.TotalHours;
+                    }
+                    
+                    // Ensure hoursOn does not exceed 24 for a single day (except potentially the current day if uptime spans >24h)
+                    if (currentDate != today || (currentDate == today && lastBootTime.Date == today)){
+                         hoursOn = Math.Min(hoursOn, 24.0);
+                    }
+                    hoursOn = Math.Max(0, hoursOn); // Ensure it's not negative
+
+                    result.Add(new KeyValuePair<DateTime, double>(currentDate, hoursOn));
                 }
+
                 return result;
             }
-
-            for (int i = 0; i < days; i++)
+            catch (Exception ex)
             {
-                DateTime currentDate = today.AddDays(-(days - 1) + i);
-                double hoursOn = 0;
-
-                if (currentDate < lastBootTime.Date)
-                {
-                    hoursOn = 0; // System was not on yet
-                }
-                else if (currentDate == lastBootTime.Date)
-                {
-                    // If it's the boot day
-                    if (currentDate == today) // Booted today
-                    {
-                        hoursOn = (DateTime.Now - lastBootTime).TotalHours;
-                    }
-                    else // Booted on a previous day (this is the boot day)
-                    {
-                        hoursOn = (currentDate.AddDays(1) - lastBootTime).TotalHours;
-                    }
-                }
-                else if (currentDate > lastBootTime.Date && currentDate < today)
-                {
-                    // Full day between boot day and today
-                    hoursOn = 24;
-                }
-                else if (currentDate == today)
-                {
-                    // Today, and boot time was before today
-                    hoursOn = DateTime.Now.TimeOfDay.TotalHours;
-                }
-                
-                // Ensure hoursOn does not exceed 24 for a single day (except potentially the current day if uptime spans >24h)
-                if (currentDate != today || (currentDate == today && lastBootTime.Date == today)){
-                     hoursOn = Math.Min(hoursOn, 24.0);
-                }
-                hoursOn = Math.Max(0, hoursOn); // Ensure it's not negative
-
-                result.Add(new KeyValuePair<DateTime, double>(currentDate, hoursOn));
+                Logger.Log(new UsageDataServiceException("Error calculating daily system on time.", ex), "GetDailySystemOnTime");
+                return new List<KeyValuePair<DateTime, double>>();
             }
-
-            return result;
         }
 
         /// <summary>
@@ -591,24 +600,24 @@ namespace UsageDataServiceLib
         /// <returns>List of KeyValuePair with date and total active hours for the category.</returns>
         public List<KeyValuePair<DateTime, double>> GetTotalActiveTimeForCategory(string category, int days)
         {
-            List<KeyValuePair<DateTime, double>> result = new List<KeyValuePair<DateTime, double>>();
-            DateTime today = DateTime.Today;
-            DateTime startDate = today.AddDays(-(days - 1));
-
-            // Initialize result with all days (including zero values)
-            for (int i = 0; i < days; i++)
-            {
-                result.Add(new KeyValuePair<DateTime, double>(startDate.AddDays(i), 0));
-            }
-
-            if (!File.Exists(_dataFilePath))
-            {
-                Console.WriteLine("CSV file not found for category aggregation.");
-                return result; // Return empty initialized list
-            }
-
             try
             {
+                List<KeyValuePair<DateTime, double>> result = new List<KeyValuePair<DateTime, double>>();
+                DateTime today = DateTime.Today;
+                DateTime startDate = today.AddDays(-(days - 1));
+
+                // Initialize result with all days (including zero values)
+                for (int i = 0; i < days; i++)
+                {
+                    result.Add(new KeyValuePair<DateTime, double>(startDate.AddDays(i), 0));
+                }
+
+                if (!File.Exists(_dataFilePath))
+                {
+                    Console.WriteLine("CSV file not found for category aggregation.");
+                    return result; // Return empty initialized list
+                }
+
                 using (StreamReader reader = new StreamReader(_dataFilePath))
                 {
                     reader.ReadLine(); // Skip header
@@ -643,22 +652,23 @@ namespace UsageDataServiceLib
                         }
                     }
                 }
+                
+                // Cap hours at 24 per day
+                for (int i = 0; i < result.Count; i++)
+                {
+                    if (result[i].Value > 24.0)
+                    {
+                        result[i] = new KeyValuePair<DateTime, double>(result[i].Key, 24.0);
+                    }
+                }
+
+                return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error reading CSV for category {category} aggregation: {ex.Message}");
+                Logger.Log(new UsageDataServiceException($"Error reading CSV for category {category} aggregation.", ex), "GetTotalActiveTimeForCategory");
+                return new List<KeyValuePair<DateTime, double>>();
             }
-            
-            // Cap hours at 24 per day
-            for (int i = 0; i < result.Count; i++)
-            {
-                if (result[i].Value > 24.0)
-                {
-                    result[i] = new KeyValuePair<DateTime, double>(result[i].Key, 24.0);
-                }
-            }
-
-            return result;
         }
 
         /// <summary>
@@ -666,67 +676,67 @@ namespace UsageDataServiceLib
         /// </summary>
         public void SaveDailySystemOnTime(DateTime dateToSave, double totalHours)
         {
-            if (_lastSavedSystemOnTimeDate == dateToSave && Math.Abs(_lastSavedSystemOnTimeValue - totalHours) < 0.001)
-                return;
-
-            EnsureDailySystemOnTimeCsvExists();
-            List<string> lines = new List<string>();
-            string dateToSaveStr = dateToSave.ToString("yyyy-MM-dd");
-            bool dateFound = false;
-
-            if (File.Exists(_dailySystemOnTimeCsvPath))
-            {
-                lines.AddRange(File.ReadAllLines(_dailySystemOnTimeCsvPath));
-            }
-
-            // Find and update if exists, or add new line
-            for (int i = 0; i < lines.Count; i++)
-            {
-                string[] parts = lines[i].Split(',');
-                if (i == 0 && lines[i].Equals("Date,TotalOnTimeHours", StringComparison.OrdinalIgnoreCase)) continue; // Skip header if it's the first line
-                if (parts.Length > 0 && parts[0] == dateToSaveStr)
-                {
-                    lines[i] = $"{dateToSaveStr},{totalHours.ToString("F2", CultureInfo.InvariantCulture)}";
-                    dateFound = true;
-                    break;
-                }
-            }
-
-            if (!dateFound)
-            {
-                 // Add header if file was empty or header was missing
-                if (!lines.Any() || !lines[0].Equals("Date,TotalOnTimeHours", StringComparison.OrdinalIgnoreCase))
-                {
-                    lines.Insert(0, "Date,TotalOnTimeHours");
-                }
-                lines.Add($"{dateToSaveStr},{totalHours.ToString("F2", CultureInfo.InvariantCulture)}");
-            }
-            
-            // Sort lines by date, keeping header at the top
-            if (lines.Count > 1) {
-                var header = lines[0];
-                var dataLines = lines.Skip(1)
-                    .Select(line => {
-                        var parts = line.Split(',');
-                        DateTime.TryParseExact(parts[0], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date);
-                        return new { Date = date, Line = line };
-                    })
-                    .OrderBy(x => x.Date)
-                    .Select(x => x.Line)
-                    .ToList();
-                lines = new List<string> { header };
-                lines.AddRange(dataLines);
-            }
-
             try
             {
+                if (_lastSavedSystemOnTimeDate == dateToSave && Math.Abs(_lastSavedSystemOnTimeValue - totalHours) < 0.001)
+                    return;
+
+                EnsureDailySystemOnTimeCsvExists();
+                List<string> lines = new List<string>();
+                string dateToSaveStr = dateToSave.ToString("yyyy-MM-dd");
+                bool dateFound = false;
+
+                if (File.Exists(_dailySystemOnTimeCsvPath))
+                {
+                    lines.AddRange(File.ReadAllLines(_dailySystemOnTimeCsvPath));
+                }
+
+                // Find and update if exists, or add new line
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    string[] parts = lines[i].Split(',');
+                    if (i == 0 && lines[i].Equals("Date,TotalOnTimeHours", StringComparison.OrdinalIgnoreCase)) continue; // Skip header if it's the first line
+                    if (parts.Length > 0 && parts[0] == dateToSaveStr)
+                    {
+                        lines[i] = $"{dateToSaveStr},{totalHours.ToString("F2", CultureInfo.InvariantCulture)}";
+                        dateFound = true;
+                        break;
+                    }
+                }
+
+                if (!dateFound)
+                {
+                     // Add header if file was empty or header was missing
+                    if (!lines.Any() || !lines[0].Equals("Date,TotalOnTimeHours", StringComparison.OrdinalIgnoreCase))
+                    {
+                        lines.Insert(0, "Date,TotalOnTimeHours");
+                    }
+                    lines.Add($"{dateToSaveStr},{totalHours.ToString("F2", CultureInfo.InvariantCulture)}");
+                }
+                
+                // Sort lines by date, keeping header at the top
+                if (lines.Count > 1) {
+                    var header = lines[0];
+                    var dataLines = lines.Skip(1)
+                        .Select(line => {
+                            var parts = line.Split(',');
+                            DateTime.TryParseExact(parts[0], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date);
+                            return new { Date = date, Line = line };
+                        })
+                        .OrderBy(x => x.Date)
+                        .Select(x => x.Line)
+                        .ToList();
+                    lines = new List<string> { header };
+                    lines.AddRange(dataLines);
+                }
+
                 File.WriteAllLines(_dailySystemOnTimeCsvPath, lines);
                 _lastSavedSystemOnTimeDate = dateToSave;
                 _lastSavedSystemOnTimeValue = totalHours;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving daily system on time: {ex.Message}");
+                Logger.Log(new UsageDataServiceException("Error saving daily system on time.", ex), "SaveDailySystemOnTime");
             }
         }
 
@@ -735,14 +745,14 @@ namespace UsageDataServiceLib
         /// </summary>
         public List<KeyValuePair<DateTime, double>> GetPersistedDailySystemOnTime(int days)
         {
-            EnsureDailySystemOnTimeCsvExists();
-            List<KeyValuePair<DateTime, double>> result = new List<KeyValuePair<DateTime, double>>();
-            Dictionary<DateTime, double> dataMap = new Dictionary<DateTime, double>();
-            DateTime today = DateTime.Today;
-
-            if (File.Exists(_dailySystemOnTimeCsvPath))
+            try
             {
-                try
+                EnsureDailySystemOnTimeCsvExists();
+                List<KeyValuePair<DateTime, double>> result = new List<KeyValuePair<DateTime, double>>();
+                Dictionary<DateTime, double> dataMap = new Dictionary<DateTime, double>();
+                DateTime today = DateTime.Today;
+
+                if (File.Exists(_dailySystemOnTimeCsvPath))
                 {
                     string[] lines = File.ReadAllLines(_dailySystemOnTimeCsvPath);
                     foreach (string line in lines.Skip(1)) // Skip header
@@ -758,20 +768,21 @@ namespace UsageDataServiceLib
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error reading persisted daily system on time: {ex.Message}");
-                }
-            }
 
-            // Populate result for the last 'days', using stored data or 0 if not found
-            for (int i = 0; i < days; i++)
-            {
-                DateTime currentDate = today.AddDays(-(days - 1) + i);
-                double hours = dataMap.ContainsKey(currentDate.Date) ? dataMap[currentDate.Date] : 0;
-                result.Add(new KeyValuePair<DateTime, double>(currentDate, hours));
+                // Populate result for the last 'days', using stored data or 0 if not found
+                for (int i = 0; i < days; i++)
+                {
+                    DateTime currentDate = today.AddDays(-(days - 1) + i);
+                    double hours = dataMap.ContainsKey(currentDate.Date) ? dataMap[currentDate.Date] : 0;
+                    result.Add(new KeyValuePair<DateTime, double>(currentDate, hours));
+                }
+                return result;
             }
-            return result;
+            catch (Exception ex)
+            {
+                Logger.Log(new UsageDataServiceException("Error reading persisted daily system on time.", ex), "GetPersistedDailySystemOnTime");
+                return new List<KeyValuePair<DateTime, double>>();
+            }
         }
     }
     

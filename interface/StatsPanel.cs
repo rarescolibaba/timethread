@@ -8,6 +8,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using ProcessDataLib;
 using @interface; // for Utils
+using Common; // for Logger and custom exceptions
 
 namespace @interface
 {
@@ -163,23 +164,30 @@ namespace @interface
         /// <param name="processData">Process data to display</param>
         public void UpdateStats(ProcessData processData)
         {
-            if (processData == null)
+            try
             {
-                ClearStats();
-                return;
-            }
-            
-            _titleLabel.Text = processData.Name;
-            
-            TimeSpan totalTime = processData.GetTotalTime();
-            TimeSpan idleTime = processData.GetIdleTime();
-            TimeSpan activeTime = processData.GetActiveTime();
-            
-            _totalTimeValueLabel.Text = Utils.FormatTimeSpan(totalTime);
-            _idleTimeValueLabel.Text = Utils.FormatTimeSpan(idleTime);
-            _activeTimeValueLabel.Text = Utils.FormatTimeSpan(activeTime);
+                if (processData == null)
+                {
+                    ClearStats();
+                    return;
+                }
+                
+                _titleLabel.Text = processData.Name;
+                
+                TimeSpan totalTime = processData.GetTotalTime();
+                TimeSpan idleTime = processData.GetIdleTime();
+                TimeSpan activeTime = processData.GetActiveTime();
+                
+                _totalTimeValueLabel.Text = Utils.FormatTimeSpan(totalTime);
+                _idleTimeValueLabel.Text = Utils.FormatTimeSpan(idleTime);
+                _activeTimeValueLabel.Text = Utils.FormatTimeSpan(activeTime);
 
-            SetLabelVisibility(isProcessView: true);
+                SetLabelVisibility(isProcessView: true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error updating stats panel.", ex), "StatsPanel.UpdateStats");
+            }
         }
 
         /// <summary>
@@ -189,11 +197,18 @@ namespace @interface
         /// <param name="totalActiveMinutesToday">Total active minutes for the category today.</param>
         public void UpdateCategoryStats(string categoryName, double totalActiveMinutesToday)
         {
-            _titleLabel.Text = $"{categoryName} Stats";
-            _categoryTimeLabel.Text = "Today's Active";
-            _categoryTimeValueLabel.Text = Utils.FormatTimeSpan(TimeSpan.FromMinutes(totalActiveMinutesToday));
-            
-            SetLabelVisibility(isCategoryView: true);
+            try
+            {
+                _titleLabel.Text = $"{categoryName} Stats";
+                _categoryTimeLabel.Text = "Today's Active";
+                _categoryTimeValueLabel.Text = Utils.FormatTimeSpan(TimeSpan.FromMinutes(totalActiveMinutesToday));
+                
+                SetLabelVisibility(isCategoryView: true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error updating category stats.", ex), "StatsPanel.UpdateCategoryStats");
+            }
         }
 
         /// <summary>
@@ -202,50 +217,63 @@ namespace @interface
         /// <param name="uptime">Current system uptime.</param>
         public void UpdateSystemUptime(TimeSpan uptime)
         {
-            if (_titleLabel.Text == "Statistics" || string.IsNullOrEmpty(_titleLabel.Text))
+            try
             {
-                 _titleLabel.Text = "System Stats";
+                if (_titleLabel.Text == "Statistics" || string.IsNullOrEmpty(_titleLabel.Text))
+                {
+                     _titleLabel.Text = "System Stats";
+                }
+                _systemUptimeValueLabel.Text = $"{uptime.Days}d {uptime.Hours}h {uptime.Minutes}m";
+                SetLabelVisibility(isSystemView: true); 
             }
-            _systemUptimeValueLabel.Text = $"{uptime.Days}d {uptime.Hours}h {uptime.Minutes}m";
-            SetLabelVisibility(isSystemView: true); 
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error updating system uptime.", ex), "StatsPanel.UpdateSystemUptime");
+            }
         }
 
         /// <summary>
-        /// Reseteaza toate statisticile si titlul
+        /// Reseteaza toate statisticile afisate
         /// </summary>
         public void ClearStats()
         {
-            _titleLabel.Text = "Statistics";
-            _totalTimeValueLabel.Text = "0h 0m";
-            _activeTimeValueLabel.Text = "0h 0m";
-            _idleTimeValueLabel.Text = "0h 0m";
-            _systemUptimeValueLabel.Text = "0d 0h 0m";
-            _categoryTimeValueLabel.Text = "0h 0m";
-            SetLabelVisibility();
+            try
+            {
+                _titleLabel.Text = "Statistics";
+                _totalTimeValueLabel.Text = "0h 0m";
+                _idleTimeValueLabel.Text = "0h 0m";
+                _activeTimeValueLabel.Text = "0h 0m";
+                _systemUptimeValueLabel.Text = "0d 0h 0m";
+                _categoryTimeValueLabel.Text = "0h 0m";
+
+                SetLabelVisibility(isProcessView: false, isCategoryView: false, isSystemView: false);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(new UIException("Error clearing stats panel.", ex), "StatsPanel.ClearStats");
+            }
         }
 
         /// <summary>
-        /// Metoda ajutatoare pentru gestionarea vizibilitatii etichetelor
+        /// Seteaza vizibilitatea etichetelor in functie de tipul de statistici afisate
         /// </summary>
+        /// <param name="isProcessView">True daca se afiseaza statistici pentru procese</param>
+        /// <param name="isCategoryView">True daca se afiseaza statistici pentru categorii</param>
+        /// <param name="isSystemView">True daca se afiseaza statistici pentru sistem</param>
         private void SetLabelVisibility(bool isProcessView = false, bool isCategoryView = false, bool isSystemView = false)
         {
             _totalTimeLabel.Visible = isProcessView;
             _totalTimeValueLabel.Visible = isProcessView;
-            _activeTimeLabel.Visible = isProcessView;
-            _activeTimeValueLabel.Visible = isProcessView;
             _idleTimeLabel.Visible = isProcessView;
             _idleTimeValueLabel.Visible = isProcessView;
+            _activeTimeLabel.Visible = isProcessView;
+            _activeTimeValueLabel.Visible = isProcessView;
 
             _categoryTimeLabel.Visible = isCategoryView;
             _categoryTimeValueLabel.Visible = isCategoryView;
 
-            _systemUptimeLabel.Visible = isSystemView || (!isProcessView && !isCategoryView);
-            _systemUptimeValueLabel.Visible = isSystemView || (!isProcessView && !isCategoryView);
-            
-            if (!isProcessView && !isCategoryView && !isSystemView) {
-                 _systemUptimeLabel.Visible = true;
-                 _systemUptimeValueLabel.Visible = true;
-            }
+            _systemUptimeLabel.Visible = isSystemView;
+            _systemUptimeValueLabel.Visible = isSystemView;
         }
     }
-} 
+}
