@@ -1,4 +1,4 @@
-// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
+// AUTORI: Bostan Sorina-Gabriela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
 // UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
 // Functionalitate:
 //Control pentru afisarea statisticilor de utilizare pentru procese, categorii si sistem in aplicatia Process Time Tracker.
@@ -7,6 +7,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using ProcessDataLib;
+using @interface; // for Utils
 
 namespace @interface
 {
@@ -174,9 +175,9 @@ namespace @interface
             TimeSpan idleTime = processData.GetIdleTime();
             TimeSpan activeTime = processData.GetActiveTime();
             
-            _totalTimeValueLabel.Text = FormatTimeSpan(totalTime);
-            _idleTimeValueLabel.Text = FormatTimeSpan(idleTime);
-            _activeTimeValueLabel.Text = FormatTimeSpan(activeTime);
+            _totalTimeValueLabel.Text = Utils.FormatTimeSpan(totalTime);
+            _idleTimeValueLabel.Text = Utils.FormatTimeSpan(idleTime);
+            _activeTimeValueLabel.Text = Utils.FormatTimeSpan(activeTime);
 
             SetLabelVisibility(isProcessView: true);
         }
@@ -190,7 +191,7 @@ namespace @interface
         {
             _titleLabel.Text = $"{categoryName} Stats";
             _categoryTimeLabel.Text = "Today's Active";
-            _categoryTimeValueLabel.Text = FormatTimeSpan(TimeSpan.FromMinutes(totalActiveMinutesToday));
+            _categoryTimeValueLabel.Text = Utils.FormatTimeSpan(TimeSpan.FromMinutes(totalActiveMinutesToday));
             
             SetLabelVisibility(isCategoryView: true);
         }
@@ -245,16 +246,6 @@ namespace @interface
                  _systemUptimeLabel.Visible = true;
                  _systemUptimeValueLabel.Visible = true;
             }
-        }
-
-        /// <summary>
-        /// Formateaza un TimeSpan ca ore si minute
-        /// </summary>
-        /// <param name="time">TimeSpan to format</param>
-        /// <returns>Formatted time string</returns>
-        private string FormatTimeSpan(TimeSpan time)
-        {
-            return $"{time.Hours}h {time.Minutes}m";
         }
     }
 } 

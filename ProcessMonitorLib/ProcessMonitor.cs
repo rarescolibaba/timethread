@@ -21,15 +21,13 @@
  *  tracking utility.                                                     *
  *                                                                        *
  **************************************************************************/
+using ProcessDataLib;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Management;
 using System.Threading;
-using System.Threading.Tasks;
-using ProcessDataLib;
 using UsageDataServiceLib;
 
 namespace ProcessMonitorLib
@@ -44,9 +42,15 @@ namespace ProcessMonitorLib
         private Dictionary<string, string> _processCategories;
         private Timer _monitorTimer;
         private Timer _saveDataTimer;
-        private const int MonitorInterval = 5000; // 5 seconds
-        private const int SaveDataInterval = 60000; // 1 minute
+        private const int MonitorInterval = 5000; // Cinci secunde
+        private const int SaveDataInterval = 60000; // Un minut
         private UsageDataService _dataService;
+
+        private bool _processDataChangedSinceLastSave = false;
+
+        // Lista de observatori pentru procese
+        private readonly List<IProcessObserver> _observers = new List<IProcessObserver>();
+        private readonly object _lock = new object(); // Pentru sincronizarea accesului la datele partajate
 
         /// <summary>
         /// Constructor pentru ProcessMonitor
@@ -119,9 +123,15 @@ namespace ProcessMonitorLib
         /// <summary>
         /// Returneaza lista curenta de date despre procese
         /// </summary>
-        public List<ProcessData> GetProcessData()
+        public List<ProcessData> ProcessData
         {
-            return _processes.Values.ToList();
+            get
+            {
+                lock (_lock)
+                {
+                    return _processes.Values.ToList();
+                }
+            }
         }
 
         /// <summary>
@@ -129,6 +139,7 @@ namespace ProcessMonitorLib
         /// </summary>
         private void MonitorProcesses(object state)
         {
+            bool anyChange = false;
             try
             {
                 Process[] runningProcesses = Process.GetProcesses();
@@ -148,15 +159,19 @@ namespace ProcessMonitorLib
 
                         currentPids.Add(process.Id);
 
-                        // Daca este un proces nou, il adaugam la urmarire
-                        if (!_processes.ContainsKey(process.Id))
+                        lock (_lock)
                         {
-                            AddNewProcess(process);
-                        }
-                        else
-                        {
-                            // Actualizam datele pentru procesul existent
-                            UpdateProcessData(process);
+                            // Daca este un proces nou, il adaugam la urmarire
+                            if (!_processes.ContainsKey(process.Id))
+                            {
+                                AddNewProcess(process);
+                                anyChange = true;
+                            }
+                            else
+                            {
+                                // Actualizam datele pentru procesul existent
+                                UpdateProcessData(process);
+                            }
                         }
                     }
                     catch (Exception)
@@ -166,11 +181,19 @@ namespace ProcessMonitorLib
                 }
 
                 // Eliminam procesele care nu mai ruleaza
-                List<int> processesToRemove = _processes.Keys.Where(pid => !currentPids.Contains(pid)).ToList();
+                List<int> processesToRemove;
+                lock (_lock)
+                {
+                    processesToRemove = _processes.Keys.Where(pid => !currentPids.Contains(pid)).ToList();
+                    foreach (int pid in processesToRemove)
+                    {
+                        _processes.Remove(pid);
+                        _processStartTimes.Remove(pid);
+                    }
+                }
                 foreach (int pid in processesToRemove)
                 {
-                    _processes.Remove(pid);
-                    _processStartTimes.Remove(pid);
+                    SafeNotifyProcessRemoved(pid); // Notifica observatorii
                 }
             }
             catch (Exception)
@@ -202,8 +225,12 @@ namespace ProcessMonitorLib
                     DateTime.Today,
                     (DateTime.Now - startTime).TotalHours));
 
-                _processes[process.Id] = data;
-                _processStartTimes[process.Id] = startTime;
+                lock (_lock)
+                {
+                    _processes[process.Id] = data;
+                    _processStartTimes[process.Id] = startTime;
+                }
+                SafeNotifyProcessAdded(data); // Notifica observatorii
             }
             catch (Exception)
             {
@@ -218,29 +245,51 @@ namespace ProcessMonitorLib
         {
             try
             {
-                if (_processStartTimes.TryGetValue(process.Id, out DateTime startTime))
+                ProcessData data;
+                DateTime startTime;
+                lock (_lock)
                 {
-                    ProcessData data = _processes[process.Id];
+                    if (!_processStartTimes.TryGetValue(process.Id, out startTime))
+                        return;
+                    data = _processes[process.Id];
+                }
 
-                    // Actualizam titlul procesului daca s-a schimbat
-                    if (string.IsNullOrEmpty(data.Name) && !string.IsNullOrEmpty(process.MainWindowTitle))
-                    {
-                        data.Name = process.MainWindowTitle;
-                    }
+                bool updated = false;
 
-                    // Actualizam timpul de azi
-                    data.TimeToday = DateTime.Now - startTime;
+                // Actualizam titlul procesului daca s-a schimbat
+                if (string.IsNullOrEmpty(data.Name) && !string.IsNullOrEmpty(process.MainWindowTitle))
+                {
+                    data.Name = process.MainWindowTitle;
+                    updated = true;
+                }
 
-                    // Actualizam datele istorice pentru azi
-                    var todayData = data.HistoricalData.FirstOrDefault(kvp => kvp.Key.Date == DateTime.Today.Date);
-                    int index = data.HistoricalData.IndexOf(todayData);
+                // Actualizam timpul de azi
+                var newTimeToday = DateTime.Now - startTime;
+                if (data.TimeToday != newTimeToday)
+                {
+                    data.TimeToday = newTimeToday;
+                    updated = true;
+                }
 
-                    if (index >= 0)
+                // Actualizam datele istorice pentru azi
+                var todayData = data.HistoricalData.FirstOrDefault(kvp => kvp.Key.Date == DateTime.Today.Date);
+                int index = data.HistoricalData.IndexOf(todayData);
+
+                if (index >= 0)
+                {
+                    var newHours = (DateTime.Now - startTime).TotalHours;
+                    if (Math.Abs(data.HistoricalData[index].Value - newHours) > 0.001)
                     {
                         data.HistoricalData[index] = new KeyValuePair<DateTime, double>(
                             DateTime.Today,
-                            (DateTime.Now - startTime).TotalHours);
+                            newHours);
+                        updated = true;
                     }
+                }
+
+                if (updated)
+                {
+                    SafeNotifyProcessUpdated(data); // Notifica observatorii
                 }
             }
             catch (Exception)
@@ -254,11 +303,13 @@ namespace ProcessMonitorLib
         /// </summary>
         private string GetProcessCategory(string processName)
         {
-            if (_processCategories.TryGetValue(processName, out string category))
+            lock (_lock)
             {
-                return category;
+                if (_processCategories.TryGetValue(processName, out string category))
+                {
+                    return category;
+                }
             }
-
             return "Other";
         }
 
@@ -283,12 +334,16 @@ namespace ProcessMonitorLib
         /// </summary>
         public void SetProcessCategory(string processName, string category)
         {
-            _processCategories[processName] = category;
-
-            // Actualizam categoriile pentru procesele existente
-            foreach (var process in _processes.Values.Where(p => p.Name.Contains(processName)))
+            lock (_lock)
             {
-                process.Department = category;
+                _processCategories[processName] = category;
+
+                // Actualizam categoriile pentru procesele existente
+                foreach (var process in _processes.Values.Where(p => p.Name.Contains(processName)))
+                {
+                    process.Department = category;
+                    SafeNotifyProcessUpdated(process);
+                }
             }
         }
 
@@ -311,9 +366,12 @@ namespace ProcessMonitorLib
         {
             try
             {
+                if (!_processDataChangedSinceLastSave)
+                    return; // Nicio schimbare, skip la scriere
+
                 // Salvam datele despre procese
                 List<ProcessData> processesToSave;
-                lock (_processes)
+                lock (_lock)
                 {
                     processesToSave = _processes.Values.ToList();
                 }
@@ -333,6 +391,7 @@ namespace ProcessMonitorLib
                         Console.WriteLine($"Saved today's system on-time: {currentTodayOnTimeHours:F2} hours.");
                     }
                 }
+                _processDataChangedSinceLastSave = false;
             }
             catch (Exception ex) // Exceptie generala pentru metoda
             {
@@ -378,7 +437,67 @@ namespace ProcessMonitorLib
             return DateTime.Now - lastBootTime;
         }
 
+        // Metode pentru patternul Observer
+        public void Subscribe(IProcessObserver observer)
+        {
+            if (observer == null) return;
+            lock (_lock)
+            {
+                if (!_observers.Contains(observer))
+                    _observers.Add(observer);
+            }
+        }
+
+        public void Unsubscribe(IProcessObserver observer)
+        {
+            if (observer == null) return;
+            lock (_lock)
+            {
+                _observers.Remove(observer);
+            }
+        }
+
+        // Metode pentru notificarea observatorilor
+        private void SafeNotifyProcessAdded(ProcessData process)
+        {
+            List<IProcessObserver> observersCopy;
+            lock (_lock)
+            {
+                observersCopy = _observers.ToList();
+            }
+            foreach (var observer in observersCopy)
+            {
+                try { observer.OnProcessAdded(process); }
+                catch (Exception ex) { /* todo: exception handling */ }
+            }
+        }
+
+        private void SafeNotifyProcessRemoved(int pid)
+        {
+            List<IProcessObserver> observersCopy;
+            lock (_lock)
+            {
+                observersCopy = _observers.ToList();
+            }
+            foreach (var observer in observersCopy)
+            {
+                try { observer.OnProcessRemoved(pid); }
+                catch (Exception ex) { /* todo: exception handling */ }
+            }
+        }
+
+        private void SafeNotifyProcessUpdated(ProcessData process)
+        {
+            List<IProcessObserver> observersCopy;
+            lock (_lock)
+            {
+                observersCopy = _observers.ToList();
+            }
+            foreach (var observer in observersCopy)
+            {
+                try { observer.OnProcessUpdated(process); }
+                catch (Exception ex) { /* todo: exception handling */ }
+            }
+        }
     }
-
-
 }

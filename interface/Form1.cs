@@ -1,4 +1,4 @@
-﻿// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
+﻿// AUTORI: Bostan Sorina-Gabriela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
 // UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
 // Functionalitate:
 // Fereastra principala a aplicatiei Process Time Tracker.
@@ -18,13 +18,14 @@ using System.Reflection;
 using ProcessDataLib;
 using ProcessMonitorLib;
 using UsageDataServiceLib;
+using @interface; // for Utils
 
 namespace @interface
 {
     /// <summary>
     /// Fereastra principala pentru aplicatia Process Time Tracker
     /// </summary>
-    public partial class Form1 : Form
+    public partial class Form1 : Form, IProcessObserver
     {
         private UsageGraph _usageGraph;
         private ListView _processListView;
@@ -56,6 +57,7 @@ namespace @interface
                 _dataService = new UsageDataService();
                 InitializeControls(); 
                 _processMonitor = new ProcessMonitor();
+                _processMonitor.Subscribe(this);
 
                 _updateTimer = new Timer();
                 _updateTimer.Interval = 10000; 
@@ -145,7 +147,7 @@ namespace @interface
         {
             if (_processMonitor != null) 
             {
-                _processData = _processMonitor.GetProcessData();
+                _processData = _processMonitor.ProcessData;
                 UpdateProcessList();
             }
         }
@@ -157,6 +159,7 @@ namespace @interface
         {
             if (_processListView == null || _processData == null || _categorySelector == null) return; 
 
+            _processListView.BeginUpdate();
             _processListView.Items.Clear();
             List<ProcessData> filteredProcesses = _processData;
 
@@ -170,7 +173,7 @@ namespace @interface
                 ListViewItem item = new ListViewItem(process.Name);
                 item.SubItems.Add(process.PID.ToString());
                 item.SubItems.Add(process.Department);
-                item.SubItems.Add(FormatTimeSpan(process.TimeToday));
+                item.SubItems.Add(Utils.FormatTimeSpan(process.TimeToday));
                 item.Tag = process;
                 _processListView.Items.Add(item);
             }
@@ -187,11 +190,12 @@ namespace @interface
                     }
                 }
             }
+            _processListView.EndUpdate();
         }
 
         private string FormatTimeSpan(TimeSpan time)
         {
-            return $"{time.Hours}h {time.Minutes}m";
+            return Utils.FormatTimeSpan(time);
         }
 
         private void UpdateGraphView()
@@ -360,6 +364,97 @@ namespace @interface
             base.OnFormClosing(e);
             if (_updateTimer != null) _updateTimer.Stop(); 
             if (_processMonitor != null) _processMonitor.StopMonitoring(); 
+        }
+
+        /// <summary>
+        /// Elibereaza resursele la inchiderea aplicatiei
+        /// </summary>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_processMonitor != null)
+                {
+                    _processMonitor.Unsubscribe(this);
+                }
+                if (components != null)
+                {
+                    components.Dispose();
+                }
+                // Eliberare resurse suplimentare, daca este cazul
+            }
+            base.Dispose(disposing);
+        }
+
+        /// <summary>
+        /// Notificare la adaugarea unui proces
+        /// </summary>
+        public void OnProcessAdded(ProcessData process)
+        {
+            BeginInvoke((Action)(() =>
+            {
+                AddOrUpdateProcessInList(process);
+            }));
+        }
+
+        /// <summary>
+        /// Notificare la eliminarea unui proces
+        /// </summary>
+        public void OnProcessRemoved(int pid)
+        {
+            BeginInvoke((Action)(() =>
+            {
+                RemoveProcessFromList(pid);
+            }));
+        }
+
+        /// <summary>
+        /// Notificare la actualizarea unui proces
+        /// </summary>
+        public void OnProcessUpdated(ProcessData process)
+        {
+            BeginInvoke((Action)(() =>
+            {
+                AddOrUpdateProcessInList(process);
+            }));
+        }
+
+        private void AddOrUpdateProcessInList(ProcessData process)
+        {
+            if (_processListView == null) return;
+            foreach (ListViewItem item in _processListView.Items)
+            {
+                if (item.Tag is ProcessData pd && pd.PID == process.PID)
+                {
+                    // Update
+                    item.Text = process.Name;
+                    item.SubItems[1].Text = process.PID.ToString();
+                    item.SubItems[2].Text = process.Department;
+                    item.SubItems[3].Text = Utils.FormatTimeSpan(process.TimeToday);
+                    item.Tag = process;
+                    return;
+                }
+            }
+            // Add
+            ListViewItem newItem = new ListViewItem(process.Name);
+            newItem.SubItems.Add(process.PID.ToString());
+            newItem.SubItems.Add(process.Department);
+            newItem.SubItems.Add(Utils.FormatTimeSpan(process.TimeToday));
+            newItem.Tag = process;
+            _processListView.Items.Add(newItem);
+        }
+
+        private void RemoveProcessFromList(int pid)
+        {
+            if (_processListView == null) return;
+            foreach (ListViewItem item in _processListView.Items)
+            {
+                if (item.Tag is ProcessData pd && pd.PID == pid)
+                {
+                    _processListView.Items.Remove(item);
+                    break;
+                }
+            }
         }
     }
 }

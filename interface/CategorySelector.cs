@@ -1,4 +1,4 @@
-// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
+// AUTORI: Bostan Sorina-Gabriela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
 // UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
 // Functionalitate:
 //Control pentru selectarea categoriilor de procese si accesarea help-ului in aplicatia Process Time Tracker.

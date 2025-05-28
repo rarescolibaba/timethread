@@ -42,6 +42,11 @@ namespace UsageDataServiceLib
         private const string DATA_FOLDER = "data";
         private const string CSV_FILENAME = "usage_data.csv";
         private const string DAILY_ON_TIME_CSV_FILENAME = "daily_system_on_time.csv";
+
+        // Cache pentru a nu scrie de mai multe ori aceleasi date
+        private List<ProcessDataLib.ProcessData> _lastSavedProcessData = null;
+        private DateTime _lastSavedSystemOnTimeDate = DateTime.MinValue;
+        private double _lastSavedSystemOnTimeValue = -1;
         
         /// <summary>
         /// Constructor pentru UsageDataService
@@ -121,6 +126,22 @@ namespace UsageDataServiceLib
         /// <param name="processes">List of processes to save</param>
         public void SaveProcessData(List<ProcessData> processes)
         {
+            // Salvam in fisier doar daca exista schimbari
+            if (_lastSavedProcessData != null && _lastSavedProcessData.Count == processes.Count)
+            {
+                bool same = true;
+                for (int i = 0; i < processes.Count; i++)
+                {
+                    if (processes[i].PID != _lastSavedProcessData[i].PID ||
+                        processes[i].TimeToday != _lastSavedProcessData[i].TimeToday)
+                    {
+                        same = false;
+                        break;
+                    }
+                }
+                if (same) return;
+            }
+
             try
             {
                 // Load all existing data
@@ -253,6 +274,16 @@ namespace UsageDataServiceLib
                 File.WriteAllLines(_dataFilePath, outputLines);
                 
                 Console.WriteLine($"Saved data to CSV with {outputLines.Count - 1} records");
+
+                // Actualizare cache
+                _lastSavedProcessData = processes.Select(pd => new ProcessData
+                {
+                    Name = pd.Name,
+                    PID = pd.PID,
+                    Department = pd.Department,
+                    TimeToday = pd.TimeToday,
+                    HistoricalData = new List<KeyValuePair<DateTime, double>>(pd.HistoricalData)
+                }).ToList();
             }
             catch (Exception ex)
             {
@@ -635,6 +666,9 @@ namespace UsageDataServiceLib
         /// </summary>
         public void SaveDailySystemOnTime(DateTime dateToSave, double totalHours)
         {
+            if (_lastSavedSystemOnTimeDate == dateToSave && Math.Abs(_lastSavedSystemOnTimeValue - totalHours) < 0.001)
+                return;
+
             EnsureDailySystemOnTimeCsvExists();
             List<string> lines = new List<string>();
             string dateToSaveStr = dateToSave.ToString("yyyy-MM-dd");
@@ -687,6 +721,8 @@ namespace UsageDataServiceLib
             try
             {
                 File.WriteAllLines(_dailySystemOnTimeCsvPath, lines);
+                _lastSavedSystemOnTimeDate = dateToSave;
+                _lastSavedSystemOnTimeValue = totalHours;
             }
             catch (Exception ex)
             {
