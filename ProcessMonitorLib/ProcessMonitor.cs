@@ -23,6 +23,7 @@
  **************************************************************************/
 using ProcessDataLib;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -49,7 +50,7 @@ namespace ProcessMonitorLib
         private bool _processDataChangedSinceLastSave = false;
 
         // Lista de observatori pentru procese
-        private readonly List<IProcessObserver> _observers = new List<IProcessObserver>();
+        private readonly ConcurrentBag<WeakReference<IProcessObserver>> _observers = new ConcurrentBag<WeakReference<IProcessObserver>>();
         private readonly object _lock = new object(); // Pentru sincronizarea accesului la datele partajate
 
         /// <summary>
@@ -135,11 +136,28 @@ namespace ProcessMonitorLib
         }
 
         /// <summary>
+        /// Returneaza un snapshot al tuturor proceselor curente (pentru observatori noi)
+        /// </summary>
+        public List<ProcessData> GetProcessSnapshot()
+        {
+            lock (_lock)
+            {
+                return _processes.Values.Select(pd => new ProcessData
+                {
+                    Name = pd.Name,
+                    PID = pd.PID,
+                    Department = pd.Department,
+                    TimeToday = pd.TimeToday,
+                    HistoricalData = new List<KeyValuePair<DateTime, double>>(pd.HistoricalData)
+                }).ToList();
+            }
+        }
+
+        /// <summary>
         /// Actualizeaza datele despre procese prin monitorizarea proceselor rulate
         /// </summary>
         private void MonitorProcesses(object state)
         {
-            bool anyChange = false;
             try
             {
                 Process[] runningProcesses = Process.GetProcesses();
@@ -156,25 +174,31 @@ namespace ProcessMonitorLib
                         {
                             continue;
                         }
+                        // Skip system processes
+                        if (process.SessionId == 0 || process.ProcessName.Equals("System", StringComparison.OrdinalIgnoreCase))
+                            continue;
 
                         currentPids.Add(process.Id);
 
+                        bool addedOrUpdated = false;
                         lock (_lock)
                         {
                             // Daca este un proces nou, il adaugam la urmarire
                             if (!_processes.ContainsKey(process.Id))
                             {
                                 AddNewProcess(process);
-                                anyChange = true;
+                                addedOrUpdated = true;
                             }
                             else
                             {
-                                // Actualizam datele pentru procesul existent
-                                UpdateProcessData(process);
+                                if (UpdateProcessData(process))
+                                    addedOrUpdated = true;
                             }
                         }
+                        if (addedOrUpdated)
+                            _processDataChangedSinceLastSave = true;
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
                         // Procesul poate sa fi iesit, il sarim
                     }
@@ -191,14 +215,16 @@ namespace ProcessMonitorLib
                         _processStartTimes.Remove(pid);
                     }
                 }
+                if (processesToRemove.Count > 0)
+                    _processDataChangedSinceLastSave = true;
                 foreach (int pid in processesToRemove)
                 {
                     SafeNotifyProcessRemoved(pid); // Notifica observatorii
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Log sau tratare exceptie
+                LogException("MonitorProcesses", ex);
             }
         }
 
@@ -230,18 +256,20 @@ namespace ProcessMonitorLib
                     _processes[process.Id] = data;
                     _processStartTimes[process.Id] = startTime;
                 }
-                SafeNotifyProcessAdded(data); // Notifica observatorii
+                _processDataChangedSinceLastSave = true;
+                SafeNotifyProcessAdded(data);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Procesul poate sa fi iesit, il sarim
+                LogException("AddNewProcess", ex);
             }
         }
 
         /// <summary>
         /// Actualizeaza un proces existent cu datele curente
         /// </summary>
-        private void UpdateProcessData(Process process)
+        /// <returns>true daca s-a facut o actualizare</returns>
+        private bool UpdateProcessData(Process process)
         {
             try
             {
@@ -250,7 +278,7 @@ namespace ProcessMonitorLib
                 lock (_lock)
                 {
                     if (!_processStartTimes.TryGetValue(process.Id, out startTime))
-                        return;
+                        return false;
                     data = _processes[process.Id];
                 }
 
@@ -289,12 +317,15 @@ namespace ProcessMonitorLib
 
                 if (updated)
                 {
-                    SafeNotifyProcessUpdated(data); // Notifica observatorii
+                    _processDataChangedSinceLastSave = true;
+                    SafeNotifyProcessUpdated(data);
                 }
+                return updated;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Procesul poate sa fi iesit, il sarim
+                LogException("UpdateProcessData", ex);
+                return false;
             }
         }
 
@@ -334,6 +365,7 @@ namespace ProcessMonitorLib
         /// </summary>
         public void SetProcessCategory(string processName, string category)
         {
+            List<ProcessData> updatedProcesses = new List<ProcessData>();
             lock (_lock)
             {
                 _processCategories[processName] = category;
@@ -342,7 +374,33 @@ namespace ProcessMonitorLib
                 foreach (var process in _processes.Values.Where(p => p.Name.Contains(processName)))
                 {
                     process.Department = category;
-                    SafeNotifyProcessUpdated(process);
+                    updatedProcesses.Add(process);
+                }
+            }
+            if (updatedProcesses.Count > 0)
+            {
+                _processDataChangedSinceLastSave = true;
+                // Batch notification: notify once for all updated processes
+                SafeNotifyProcessesUpdated(updatedProcesses);
+            }
+        }
+
+        /// <summary>
+        /// Notifica observatorii despre actualizarea mai multor procese (batch)
+        /// </summary>
+        private void SafeNotifyProcessesUpdated(IEnumerable<ProcessData> processes)
+        {
+            var observers = GetLiveObservers();
+            foreach (var observer in observers)
+            {
+                try
+                {
+                    foreach (var process in processes)
+                        observer.OnProcessUpdated(process);
+                }
+                catch (Exception ex)
+                {
+                    LogException("SafeNotifyProcessesUpdated", ex);
                 }
             }
         }
@@ -441,63 +499,70 @@ namespace ProcessMonitorLib
         public void Subscribe(IProcessObserver observer)
         {
             if (observer == null) return;
-            lock (_lock)
+            _observers.Add(new WeakReference<IProcessObserver>(observer));
+            // Immediately sync state for new observer
+            var snapshot = GetProcessSnapshot();
+            foreach (var process in snapshot)
             {
-                if (!_observers.Contains(observer))
-                    _observers.Add(observer);
+                try { observer.OnProcessAdded(process); }
+                catch (Exception ex) { LogException("Subscribe.OnProcessAdded", ex); }
             }
         }
 
         public void Unsubscribe(IProcessObserver observer)
         {
-            if (observer == null) return;
-            lock (_lock)
+            // No direct removal in ConcurrentBag; rely on WeakReference GC
+        }
+
+        // Helper to get live observers
+        private List<IProcessObserver> GetLiveObservers()
+        {
+            var live = new List<IProcessObserver>();
+            foreach (var weak in _observers)
             {
-                _observers.Remove(observer);
+                if (weak.TryGetTarget(out var obs) && obs != null)
+                    live.Add(obs);
             }
+            return live;
         }
 
         // Metode pentru notificarea observatorilor
         private void SafeNotifyProcessAdded(ProcessData process)
         {
-            List<IProcessObserver> observersCopy;
-            lock (_lock)
-            {
-                observersCopy = _observers.ToList();
-            }
-            foreach (var observer in observersCopy)
+            foreach (var observer in GetLiveObservers())
             {
                 try { observer.OnProcessAdded(process); }
-                catch (Exception ex) { /* todo: exception handling */ }
+                catch (Exception ex) { LogException("SafeNotifyProcessAdded", ex); }
             }
         }
 
         private void SafeNotifyProcessRemoved(int pid)
         {
-            List<IProcessObserver> observersCopy;
-            lock (_lock)
-            {
-                observersCopy = _observers.ToList();
-            }
-            foreach (var observer in observersCopy)
+            foreach (var observer in GetLiveObservers())
             {
                 try { observer.OnProcessRemoved(pid); }
-                catch (Exception ex) { /* todo: exception handling */ }
+                catch (Exception ex) { LogException("SafeNotifyProcessRemoved", ex); }
             }
         }
 
         private void SafeNotifyProcessUpdated(ProcessData process)
         {
-            List<IProcessObserver> observersCopy;
-            lock (_lock)
-            {
-                observersCopy = _observers.ToList();
-            }
-            foreach (var observer in observersCopy)
+            foreach (var observer in GetLiveObservers())
             {
                 try { observer.OnProcessUpdated(process); }
-                catch (Exception ex) { /* todo: exception handling */ }
+                catch (Exception ex) { LogException("SafeNotifyProcessUpdated", ex); }
             }
+        }
+
+        // Logging helper
+        private void LogException(string context, Exception ex)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {context}: {ex}");
+                // Optionally, log to file or telemetry here
+            }
+            catch { }
         }
     }
 }

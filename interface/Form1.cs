@@ -300,6 +300,7 @@ namespace @interface
         /// </summary>
         private void CategorySelector_CategorySelected(object sender, string category)
         {
+            // Reaplica filtrul
             UpdateProcessList();
             _selectedProcess = null;
             if (_processListView != null) _processListView.SelectedItems.Clear();
@@ -393,7 +394,9 @@ namespace @interface
         {
             BeginInvoke((Action)(() =>
             {
-                AddOrUpdateProcessInList(process);
+                // Only add if it matches the current filter
+                if (IsProcessVisibleInCurrentCategory(process))
+                    AddOrUpdateProcessInList(process);
             }));
         }
 
@@ -415,33 +418,59 @@ namespace @interface
         {
             BeginInvoke((Action)(() =>
             {
-                AddOrUpdateProcessInList(process);
+                // Only update if it matches the current filter
+                if (IsProcessVisibleInCurrentCategory(process))
+                    AddOrUpdateProcessInList(process);
+                else
+                    RemoveProcessFromList(process.PID);
             }));
+        }
+
+        /// <summary>
+        /// Metoda ajutatoare: determina daca ar fi vizibil procesul in categoria selectata
+        /// </summary>
+        private bool IsProcessVisibleInCurrentCategory(ProcessData process)
+        {
+            if (_categorySelector == null) return true;
+            var selected = _categorySelector.SelectedCategory;
+            return selected == "All" || process.Department == selected;
         }
 
         private void AddOrUpdateProcessInList(ProcessData process)
         {
             if (_processListView == null) return;
+            // Incercam gasirea in lista
+            ListViewItem found = null;
             foreach (ListViewItem item in _processListView.Items)
             {
                 if (item.Tag is ProcessData pd && pd.PID == process.PID)
                 {
-                    // Update
-                    item.Text = process.Name;
-                    item.SubItems[1].Text = process.PID.ToString();
-                    item.SubItems[2].Text = process.Department;
-                    item.SubItems[3].Text = Utils.FormatTimeSpan(process.TimeToday);
-                    item.Tag = process;
-                    return;
+                    found = item;
+                    break;
                 }
             }
-            // Add
-            ListViewItem newItem = new ListViewItem(process.Name);
-            newItem.SubItems.Add(process.PID.ToString());
-            newItem.SubItems.Add(process.Department);
-            newItem.SubItems.Add(Utils.FormatTimeSpan(process.TimeToday));
-            newItem.Tag = process;
-            _processListView.Items.Add(newItem);
+            if (found != null)
+            {
+                // Update
+                found.Text = process.Name;
+                found.SubItems[1].Text = process.PID.ToString();
+                found.SubItems[2].Text = process.Department;
+                found.SubItems[3].Text = Utils.FormatTimeSpan(process.TimeToday);
+                found.Tag = process;
+            }
+            else
+            {
+                // Add only if it matches the current filter
+                if (IsProcessVisibleInCurrentCategory(process))
+                {
+                    ListViewItem newItem = new ListViewItem(process.Name);
+                    newItem.SubItems.Add(process.PID.ToString());
+                    newItem.SubItems.Add(process.Department);
+                    newItem.SubItems.Add(Utils.FormatTimeSpan(process.TimeToday));
+                    newItem.Tag = process;
+                    _processListView.Items.Add(newItem);
+                }
+            }
         }
 
         private void RemoveProcessFromList(int pid)
