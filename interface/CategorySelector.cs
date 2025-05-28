@@ -1,3 +1,8 @@
+// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
+// UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
+// Functionalitate:
+//Control pentru selectarea categoriilor de procese si accesarea help-ului in aplicatia Process Time Tracker.
+// ---------------------------------------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,7 +13,7 @@ using System.Reflection;
 namespace @interface
 {
     /// <summary>
-    /// Control for selecting process categories and accessing help
+    /// Control pentru selectarea categoriilor de procese si accesarea help-ului
     /// </summary>
     public class CategorySelector : Panel
     {
@@ -17,15 +22,18 @@ namespace @interface
         private Button _helpButton; 
 
         /// <summary>
-        /// Event raised when a category is selected
+        /// Eveniment declansat cand se selecteaza o categorie
         /// </summary>
         public event EventHandler<string> CategorySelected;
 
         /// <summary>
-        /// Event raised when the Help button is clicked
+        /// Eveniment declansat cand se apasa butonul de help
         /// </summary>
         public event EventHandler HelpButtonClicked;
 
+        /// <summary>
+        /// Returneaza sau seteaza categoriile disponibile
+        /// </summary>
         public List<string> Categories
         {
             get { return _categories; }
@@ -36,6 +44,9 @@ namespace @interface
             }
         }
 
+        /// <summary>
+        /// Returneaza sau seteaza categoria selectata
+        /// </summary>
         public string SelectedCategory
         {
             get { return _selectedCategory; }
@@ -46,6 +57,9 @@ namespace @interface
             }
         }
 
+        /// <summary>
+        /// Constructor pentru CategorySelector
+        /// </summary>
         public CategorySelector()
         {
             _categories = new List<string>();
@@ -65,6 +79,9 @@ namespace @interface
             CreateCategoryButtons();
         }
 
+        /// <summary>
+        /// Actualizeaza starea butoanelor in functie de categoria selectata
+        /// </summary>
         private void CreateCategoryButtons()
         {
             List<Control> controlsToRemove = new List<Control>();
@@ -144,6 +161,9 @@ namespace @interface
             }
         }
 
+        /// <summary>
+        /// Eveniment la apasarea unui buton de categorie
+        /// </summary>
         private void CategoryButton_Click(object sender, EventArgs e)
         {
             if (sender is Button button)
@@ -154,6 +174,9 @@ namespace @interface
             }
         }
 
+        /// <summary>
+        /// Eveniment la apasarea butonului de help
+        /// </summary>
         private void HelpButton_Click(object sender, EventArgs e)
         {
             HelpButtonClicked?.Invoke(this, EventArgs.Empty);

@@ -1,4 +1,10 @@
-﻿using System;
+﻿// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
+// UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
+// Functionalitate:
+// Fereastra principala a aplicatiei Process Time Tracker.
+// Gestioneaza interfata, interactiunea cu utilizatorul si actualizarea datelor despre procese si statistici.
+// ---------------------------------------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -13,7 +19,7 @@ using System.Reflection;
 namespace @interface
 {
     /// <summary>
-    /// Main form for the Process Time Tracker application
+    /// Fereastra principala pentru aplicatia Process Time Tracker
     /// </summary>
     public partial class Form1 : Form
     {
@@ -33,7 +39,7 @@ namespace @interface
         private const string HelpFileName = "HelpTimeTracker.chm"; 
 
         /// <summary>
-        /// Constructor for the main form
+        /// Constructor pentru fereastra principala
         /// </summary>
         public Form1()
         {
@@ -63,7 +69,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Updates the UI with current process data and stats panel
+        /// Actualizeaza interfata cu datele curente despre procese si panoul de statistici
         /// </summary>
         private void UpdateTimer_Tick(object sender, EventArgs e)
         {
@@ -78,7 +84,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Initializes the custom controls
+        /// Initializeaza controalele personalizate
         /// </summary>
         private void InitializeControls()
         {
@@ -130,7 +136,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Loads real process data from the system
+        /// Incarca datele reale despre procese din sistem
         /// </summary>
         private void LoadRealProcessData()
         {
@@ -142,7 +148,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Updates the process list based on the selected category
+        /// Actualizeaza lista de procese in functie de categoria selectata
         /// </summary>
         private void UpdateProcessList()
         {
@@ -248,6 +254,9 @@ namespace @interface
             Console.WriteLine($"Graph updated: {graphTitle} with {graphData.Count} points. View: {_currentGraphView}");
         }
 
+        /// <summary>
+        /// Eveniment la selectarea unui proces din lista
+        /// </summary>
         private void ProcessListView_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (_processListView.SelectedItems.Count > 0)
@@ -279,6 +288,9 @@ namespace @interface
             }
         }
 
+        /// <summary>
+        /// Eveniment la selectarea unei categorii din selector
+        /// </summary>
         private void CategorySelector_CategorySelected(object sender, string category)
         {
             UpdateProcessList();
@@ -310,6 +322,9 @@ namespace @interface
             UpdateGraphView();
         }
 
+        /// <summary>
+        /// Eveniment la apasarea butonului de help
+        /// </summary>
         private void CategorySelector_HelpButtonClicked(object sender, EventArgs e)
         {
             try
@@ -334,7 +349,9 @@ namespace @interface
             }
         }
 
-
+        /// <summary>
+        /// Elibereaza resursele la inchiderea ferestrei
+        /// </summary>
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);

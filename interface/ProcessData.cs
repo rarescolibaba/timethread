@@ -1,4 +1,9 @@
-﻿using System;
+﻿// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
+// UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
+// Functionalitate:
+// Clasa ce reprezinta un proces si datele sale de utilizare pentru aplicatia Process Time Tracker.
+// ---------------------------------------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,37 +12,37 @@ using System.Threading.Tasks;
 namespace @interface
 {
     /// <summary>
-    /// Represents a single process with its usage data
+    /// Reprezinta un proces cu datele sale de utilizare
     /// </summary>
     public class ProcessData
     {
         /// <summary>
-        /// Name of the process
+        /// Numele procesului
         /// </summary>
         public string Name { get; set; }
 
         /// <summary>
-        /// Process ID
+        /// Id-ul procesului
         /// </summary>
         public int PID { get; set; }
 
         /// <summary>
-        /// Category of the process (Games, Learning, etc.)
+        /// Categoria procesului (Games, Learning, etc.)
         /// </summary>
         public string Department { get; set; }
 
         /// <summary>
-        /// Time spent on the process today
+        /// Timpul petrecut azi pe proces
         /// </summary>
         public TimeSpan TimeToday { get; set; }
 
         /// <summary>
-        /// Historical time data for the process (hours per day)
+        /// Date istorice pentru proces (ore pe zi)
         /// </summary>
         public List<KeyValuePair<DateTime, double>> HistoricalData { get; set; }
 
         /// <summary>
-        /// Constructor for ProcessData
+        /// Constructor pentru ProcessData
         /// </summary>
         public ProcessData()
         {
@@ -45,9 +50,9 @@ namespace @interface
         }
 
         /// <summary>
-        /// Returns the total time spent on the process
+        /// Returneaza timpul total petrecut pe proces
         /// </summary>
-        /// <returns>Total time as TimeSpan</returns>
+        /// <returns>Timp total ca TimeSpan</returns>
         public TimeSpan GetTotalTime()
         {
             // In a real implementation, this would calculate the total time
@@ -55,9 +60,9 @@ namespace @interface
         }
 
         /// <summary>
-        /// Returns the active time spent on the process
+        /// Returneaza timpul activ petrecut pe proces
         /// </summary>
-        /// <returns>Active time as TimeSpan</returns>
+        /// <returns>Timp activ ca TimeSpan</returns>
         public TimeSpan GetActiveTime()
         {
             // In a real implementation, this would calculate the active time
@@ -66,9 +71,9 @@ namespace @interface
         }
 
         /// <summary>
-        /// Returns the idle time spent on the process
+        /// Returneaza timpul inactiv petrecut pe proces
         /// </summary>
-        /// <returns>Idle time as TimeSpan</returns>
+        /// <returns>Timp inactiv ca TimeSpan</returns>
         public TimeSpan GetIdleTime()
         {
             // In a real implementation, this would calculate the idle time

@@ -1,3 +1,8 @@
+// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
+// UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
+// Functionalitate:
+//Clasa pentru monitorizarea proceselor sistemului si urmarirea timpului de utilizare in aplicatia Process Time Tracker.
+// ---------------------------------------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +15,7 @@ using System.Threading.Tasks;
 namespace @interface
 {
     /// <summary>
-    /// Class to monitor system processes and track their usage
+    /// Clasa pentru monitorizarea proceselor si urmarirea utilizarii
     /// </summary>
     public class ProcessMonitor
     {
@@ -24,7 +29,7 @@ namespace @interface
         private UsageDataService _dataService;
 
         /// <summary>
-        /// Constructor for ProcessMonitor
+        /// Constructor pentru ProcessMonitor
         /// </summary>
         public ProcessMonitor()
         {
@@ -33,15 +38,15 @@ namespace @interface
             _processCategories = InitializeDefaultCategories();
             _dataService = new UsageDataService();
 
-            // Start monitoring processes
+            // Porneste monitorizarea proceselor
             _monitorTimer = new Timer(MonitorProcesses, null, 0, MonitorInterval);
 
-            // Start saving data to CSV
+            // Porneste salvarea datelor in CSV
             _saveDataTimer = new Timer(SaveDataToCSV, null, SaveDataInterval, SaveDataInterval);
         }
 
         /// <summary>
-        /// Initialize default categories for common applications
+        /// Initializeaza categoriile implicite pentru aplicatii comune
         /// </summary>
         private Dictionary<string, string> InitializeDefaultCategories()
         {
@@ -92,7 +97,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Gets the current list of process data
+        /// Returneaza lista curenta de date despre procese
         /// </summary>
         public List<ProcessData> GetProcessData()
         {
@@ -100,7 +105,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Update process data by monitoring running processes
+        /// Actualizeaza datele despre procese prin monitorizarea proceselor rulate
         /// </summary>
         private void MonitorProcesses(object state)
         {
@@ -113,34 +118,34 @@ namespace @interface
                 {
                     try
                     {
-                        //TO DO: Make it not skip background processes
+                        // TODO: Sa nu mai sara procesele de fundal
 
                         if (string.IsNullOrEmpty(process.MainWindowTitle) &&
-                            process.ProcessName != "explorer") // Skip background processes except explorer
+                            process.ProcessName != "explorer") // Daca procesul nu are fereastra si nu e explorer, il sarim
                         {
                             continue;
                         }
 
                         currentPids.Add(process.Id);
 
-                        // If this is a new process, add it to our tracking
+                        // Daca este un proces nou, il adaugam la urmarire
                         if (!_processes.ContainsKey(process.Id))
                         {
                             AddNewProcess(process);
                         }
                         else
                         {
-                            // Update existing process data
+                            // Actualizam datele pentru procesul existent
                             UpdateProcessData(process);
                         }
                     }
                     catch (Exception)
                     {
-                        // Process may have exited, skip it
+                        // Procesul poate sa fi iesit, il sarim
                     }
                 }
 
-                // Remove processes that are no longer running
+                // Eliminam procesele care nu mai ruleaza
                 List<int> processesToRemove = _processes.Keys.Where(pid => !currentPids.Contains(pid)).ToList();
                 foreach (int pid in processesToRemove)
                 {
@@ -150,12 +155,12 @@ namespace @interface
             }
             catch (Exception)
             {
-                // Log or handle the exception
+                // Log sau tratare exceptie
             }
         }
 
         /// <summary>
-        /// Add a new process to tracking
+        /// Adauga un proces nou la urmarire
         /// </summary>
         private void AddNewProcess(Process process)
         {
@@ -172,7 +177,7 @@ namespace @interface
                     TimeToday = DateTime.Now - startTime
                 };
 
-                // Add historical data - for now just today's data
+                // Adaugam date istorice - pentru moment doar pentru azi
                 data.HistoricalData.Add(new KeyValuePair<DateTime, double>(
                     DateTime.Today,
                     (DateTime.Now - startTime).TotalHours));
@@ -182,12 +187,12 @@ namespace @interface
             }
             catch (Exception)
             {
-                // Process may have exited, skip it
+                // Procesul poate sa fi iesit, il sarim
             }
         }
 
         /// <summary>
-        /// Update an existing process with current data
+        /// Actualizeaza un proces existent cu datele curente
         /// </summary>
         private void UpdateProcessData(Process process)
         {
@@ -197,16 +202,16 @@ namespace @interface
                 {
                     ProcessData data = _processes[process.Id];
 
-                    // Update process title if it has changed
+                    // Actualizam titlul procesului daca s-a schimbat
                     if (string.IsNullOrEmpty(data.Name) && !string.IsNullOrEmpty(process.MainWindowTitle))
                     {
                         data.Name = process.MainWindowTitle;
                     }
 
-                    // Update time today
+                    // Actualizam timpul de azi
                     data.TimeToday = DateTime.Now - startTime;
 
-                    // Update historical data for today
+                    // Actualizam datele istorice pentru azi
                     var todayData = data.HistoricalData.FirstOrDefault(kvp => kvp.Key.Date == DateTime.Today.Date);
                     int index = data.HistoricalData.IndexOf(todayData);
 
@@ -220,12 +225,12 @@ namespace @interface
             }
             catch (Exception)
             {
-                // Process may have exited, skip it
+                // Procesul poate sa fi iesit, il sarim
             }
         }
 
         /// <summary>
-        /// Get the category for a process based on its name
+        /// Returneaza categoria pentru un proces pe baza numelui
         /// </summary>
         private string GetProcessCategory(string processName)
         {
@@ -238,7 +243,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Get the start time of a process
+        /// Returneaza timpul de start al unui proces
         /// </summary>
         private DateTime GetProcessStartTime(Process process)
         {
@@ -248,19 +253,19 @@ namespace @interface
             }
             catch (Exception)
             {
-                // Some system processes don't allow access to the start time
+                // Unele procese de sistem nu permit accesul la timpul de start
                 return DateTime.Now;
             }
         }
 
         /// <summary>
-        /// Set a custom category for a process
+        /// Seteaza o categorie personalizata pentru un proces
         /// </summary>
         public void SetProcessCategory(string processName, string category)
         {
             _processCategories[processName] = category;
 
-            // Update categories for existing processes
+            // Actualizam categoriile pentru procesele existente
             foreach (var process in _processes.Values.Where(p => p.Name.Contains(processName)))
             {
                 process.Department = category;
@@ -268,25 +273,25 @@ namespace @interface
         }
 
         /// <summary>
-        /// Stops monitoring processes
+        /// Opreste monitorizarea proceselor
         /// </summary>
         public void StopMonitoring()
         {
             _monitorTimer?.Dispose();
             _saveDataTimer?.Dispose();
 
-            // Save data one more time before stopping
+            // Salvam datele inainte de oprire
             SaveDataToCSV(null);
         }
 
         /// <summary>
-        /// Save process data to CSV file and update daily system on-time.
+        /// Salveaza datele despre procese in fisierul CSV si actualizeaza timpul total de pornire al sistemului
         /// </summary>
         private void SaveDataToCSV(object state)
         {
             try
             {
-                // Save process data (as before)
+                // Salvam datele despre procese
                 List<ProcessData> processesToSave;
                 lock (_processes)
                 {
@@ -294,29 +299,29 @@ namespace @interface
                 }
                 _dataService.SaveProcessData(processesToSave);
 
-                // Calculate and save today's total system on-time
+                // Calculam si salvam timpul total de functionare al sistemului pentru azi
                 DateTime lastBoot = GetLastBootUpTime();
                 if (lastBoot != DateTime.MinValue)
                 {
-                    // The GetDailySystemOnTime method returns a list, for today it will be one item.
+                    // Metoda returneaza o lista, pentru azi va fi un singur element
                     var todayOnTimeData = _dataService.GetDailySystemOnTime(1, lastBoot);
                     if (todayOnTimeData.Any())
                     {
-                        // The method calculates up to the current moment for today.
+                        // Metoda calculeaza pana la momentul curent pentru azi
                         double currentTodayOnTimeHours = todayOnTimeData.First().Value;
                         _dataService.SaveDailySystemOnTime(DateTime.Today, currentTodayOnTimeHours);
                         Console.WriteLine($"Saved today's system on-time: {currentTodayOnTimeHours:F2} hours.");
                     }
                 }
             }
-            catch (Exception ex) // General catch for the method
+            catch (Exception ex) // Exceptie generala pentru metoda
             {
                 Console.WriteLine($"Error in SaveDataToCSV (ProcessMonitor): {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Gets the last boot up time of the system.
+        /// Returneaza timpul ultimei porniri a sistemului
         /// </summary>
         /// <returns>DateTime representing the last boot up time, or DateTime.MinValue if an error occurs.</returns>
         public static DateTime GetLastBootUpTime()
@@ -334,13 +339,13 @@ namespace @interface
             catch (Exception ex)
             {
                 Console.WriteLine($"Error getting last boot up time: {ex.Message}");
-                // In a real application, you might want to log this or handle it more gracefully.
+                // In unele cazuri, poti loga sau trata mai detaliat
             }
-            return DateTime.MinValue; // Should not happen in a normal scenario
+            return DateTime.MinValue; // Nu ar trebui sa se intample in mod normal
         }
 
         /// <summary>
-        /// Gets the current system uptime.
+        /// Returneaza timpul de functionare al sistemului
         /// </summary>
         /// <param name="lastBootTime">The system's last boot time.</param>
         /// <returns>TimeSpan representing the system uptime.</returns>

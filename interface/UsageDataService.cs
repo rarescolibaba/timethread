@@ -1,3 +1,10 @@
+// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
+// UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
+// Functionalitate: 
+// Clasa de servicii pentru gestionarea persistentei si preluarii datelor despre utilizarea proceselor
+// si a timpului total de functionare a sistemului in aplicatia Process Time Tracker.
+// ---------------------------------------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -7,22 +14,22 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace @interface
-{
+{  
     /// <summary>
-    /// Service class for managing process usage data persistence and retrieval
+    /// Clasa de servicii pentru gestionarea persistentei si preluarii datelor despre utilizarea proceselor
     /// </summary>
     public class UsageDataService
     {
         private string _dataFilePath;
         private string _dailySystemOnTimeCsvPath;
         
-        //!!!THIS RIGHT NOW CREATES THE FOLDER AND .csv FILE IN THE BIN DIRECTORY!!!
+        //!!!ACUM CREEAZA FOLDERUL SI .csv IN DIRECTORUL BIN!!!
         private const string DATA_FOLDER = "data";
         private const string CSV_FILENAME = "usage_data.csv";
         private const string DAILY_ON_TIME_CSV_FILENAME = "daily_system_on_time.csv";
         
         /// <summary>
-        /// Constructor for UsageDataService
+        /// Constructor pentru UsageDataService
         /// </summary>
         public UsageDataService()
         {
@@ -63,7 +70,7 @@ namespace @interface
         }
         
         /// <summary>
-        /// Creates an empty data file with headers
+        /// Creeaza un fisier de date gol cu antet
         /// </summary>
         private void CreateEmptyDataFile(string filePath, string header)
         {
@@ -82,6 +89,9 @@ namespace @interface
             }
         }
         
+        /// <summary>
+        /// Asigura existenta fisierului daily_system_on_time.csv cu antetul sau
+        /// </summary>
         private void EnsureDailySystemOnTimeCsvExists()
         {
             if (!File.Exists(_dailySystemOnTimeCsvPath))
@@ -91,7 +101,7 @@ namespace @interface
         }
         
         /// <summary>
-        /// Saves process usage data to the CSV file
+        /// Salveaza datele despre utilizarea proceselor in fisierul CSV
         /// </summary>
         /// <param name="processes">List of processes to save</param>
         public void SaveProcessData(List<ProcessData> processes)
@@ -237,7 +247,7 @@ namespace @interface
         }
         
         /// <summary>
-        /// Gets process data for a specific date
+        /// Returneaza datele procesului pentru o anumita data
         /// </summary>
         /// <param name="date">The date to get data for</param>
         /// <returns>Dictionary of process data keyed by ProcessName_PID</returns>
@@ -297,7 +307,7 @@ namespace @interface
         }
         
         /// <summary>
-        /// Gets historical data for a specific process for the last n days
+        /// Returneaza datele istorice pentru un proces pentru ultimele n zile din CSV
         /// </summary>
         /// <param name="processName">Process name to get data for</param>
         /// <param name="days">Number of days to get data for</param>
@@ -371,7 +381,7 @@ namespace @interface
         }
         
         /// <summary>
-        /// Gets total PC usage data for the last n days
+        /// Returneaza datele totale de utilizare PC pentru ultimele n zile
         /// </summary>
         /// <param name="days">Number of days to get data for</param>
         /// <returns>List of key value pairs with date and hours</returns>
@@ -464,7 +474,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Gets the calculated daily system "on time" for the last n days based on the last boot time.
+        /// Returneaza timpul calculat de functionare zilnica a sistemului pentru ultimele n zile pe baza ultimei porniri
         /// </summary>
         /// <param name="days">Number of days to get data for.</param>
         /// <param name="lastBootTime">The system's last boot up time.</param>
@@ -528,7 +538,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Gets total active time for a specific category for the last n days from the CSV.
+        /// Returneaza timpul total activ pentru o categorie pentru ultimele n zile din CSV
         /// </summary>
         /// <param name="category">Category to filter by.</param>
         /// <param name="days">Number of days to get data for.</param>
@@ -606,7 +616,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Saves or updates the total system on-time for a specific date in daily_system_on_time.csv.
+        /// Salveaza sau actualizeaza timpul total de functionare al sistemului pentru o anumita zi in daily_system_on_time.csv
         /// </summary>
         public void SaveDailySystemOnTime(DateTime dateToSave, double totalHours)
         {
@@ -670,7 +680,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Gets persisted daily system on-time for the last n days from daily_system_on_time.csv.
+        /// Returneaza timpul de functionare zilnic persistat pentru ultimele n zile din daily_system_on_time.csv
         /// </summary>
         public List<KeyValuePair<DateTime, double>> GetPersistedDailySystemOnTime(int days)
         {

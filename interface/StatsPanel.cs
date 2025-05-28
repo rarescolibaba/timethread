@@ -1,3 +1,8 @@
+// AUTORI: Bostan Sorina-Gabirela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
+// UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
+// Functionalitate:
+//Control pentru afisarea statisticilor de utilizare pentru procese, categorii si sistem in aplicatia Process Time Tracker.
+// ---------------------------------------------------------------------------------------------------
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -5,7 +10,7 @@ using System.Windows.Forms;
 namespace @interface
 {
     /// <summary>
-    /// Control for displaying usage statistics
+    /// Control pentru afisarea statisticilor de utilizare
     /// </summary>
     public class StatsPanel : Panel
     {
@@ -22,7 +27,7 @@ namespace @interface
         private Label _categoryTimeValueLabel;
 
         /// <summary>
-        /// Constructor for StatsPanel
+        /// Constructor pentru StatsPanel
         /// </summary>
         public StatsPanel()
         {
@@ -151,7 +156,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Updates the statistics with process data
+        /// Actualizeaza statisticile cu datele procesului
         /// </summary>
         /// <param name="processData">Process data to display</param>
         public void UpdateStats(ProcessData processData)
@@ -176,7 +181,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Updates the panel to show total active time for a category for today.
+        /// Actualizeaza panoul pentru a arata timpul activ total pentru o categorie astazi
         /// </summary>
         /// <param name="categoryName">The name of the category.</param>
         /// <param name="totalActiveMinutesToday">Total active minutes for the category today.</param>
@@ -190,7 +195,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Updates the system uptime display.
+        /// Actualizeaza afisarea timpului de functionare al sistemului
         /// </summary>
         /// <param name="uptime">Current system uptime.</param>
         public void UpdateSystemUptime(TimeSpan uptime)
@@ -204,7 +209,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Clears all statistics in the panel and resets title.
+        /// Reseteaza toate statisticile si titlul
         /// </summary>
         public void ClearStats()
         {
@@ -218,7 +223,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Helper method to manage visibility of different stat labels.
+        /// Metoda ajutatoare pentru gestionarea vizibilitatii etichetelor
         /// </summary>
         private void SetLabelVisibility(bool isProcessView = false, bool isCategoryView = false, bool isSystemView = false)
         {
@@ -242,7 +247,7 @@ namespace @interface
         }
 
         /// <summary>
-        /// Formats a TimeSpan as hours and minutes
+        /// Formateaza un TimeSpan ca ore si minute
         /// </summary>
         /// <param name="time">TimeSpan to format</param>
         /// <returns>Formatted time string</returns>
