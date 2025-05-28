@@ -32,10 +32,10 @@ namespace @interface
             _processStartTimes = new Dictionary<int, DateTime>();
             _processCategories = InitializeDefaultCategories();
             _dataService = new UsageDataService();
-            
+
             // Start monitoring processes
             _monitorTimer = new Timer(MonitorProcesses, null, 0, MonitorInterval);
-            
+
             // Start saving data to CSV
             _saveDataTimer = new Timer(SaveDataToCSV, null, SaveDataInterval, SaveDataInterval);
         }
@@ -108,21 +108,21 @@ namespace @interface
             {
                 Process[] runningProcesses = Process.GetProcesses();
                 HashSet<int> currentPids = new HashSet<int>();
-                
+
                 foreach (Process process in runningProcesses)
                 {
                     try
                     {
                         //TO DO: Make it not skip background processes
 
-                        if (string.IsNullOrEmpty(process.MainWindowTitle) && 
+                        if (string.IsNullOrEmpty(process.MainWindowTitle) &&
                             process.ProcessName != "explorer") // Skip background processes except explorer
                         {
                             continue;
                         }
-                        
+
                         currentPids.Add(process.Id);
-                        
+
                         // If this is a new process, add it to our tracking
                         if (!_processes.ContainsKey(process.Id))
                         {
@@ -139,7 +139,7 @@ namespace @interface
                         // Process may have exited, skip it
                     }
                 }
-                
+
                 // Remove processes that are no longer running
                 List<int> processesToRemove = _processes.Keys.Where(pid => !currentPids.Contains(pid)).ToList();
                 foreach (int pid in processesToRemove)
@@ -163,7 +163,7 @@ namespace @interface
             {
                 string category = GetProcessCategory(process.ProcessName);
                 DateTime startTime = GetProcessStartTime(process);
-                
+
                 ProcessData data = new ProcessData
                 {
                     Name = string.IsNullOrEmpty(process.MainWindowTitle) ? process.ProcessName : process.MainWindowTitle,
@@ -171,12 +171,12 @@ namespace @interface
                     Department = category,
                     TimeToday = DateTime.Now - startTime
                 };
-                
+
                 // Add historical data - for now just today's data
                 data.HistoricalData.Add(new KeyValuePair<DateTime, double>(
-                    DateTime.Today, 
+                    DateTime.Today,
                     (DateTime.Now - startTime).TotalHours));
-                
+
                 _processes[process.Id] = data;
                 _processStartTimes[process.Id] = startTime;
             }
@@ -196,20 +196,20 @@ namespace @interface
                 if (_processStartTimes.TryGetValue(process.Id, out DateTime startTime))
                 {
                     ProcessData data = _processes[process.Id];
-                    
+
                     // Update process title if it has changed
                     if (string.IsNullOrEmpty(data.Name) && !string.IsNullOrEmpty(process.MainWindowTitle))
                     {
                         data.Name = process.MainWindowTitle;
                     }
-                    
+
                     // Update time today
                     data.TimeToday = DateTime.Now - startTime;
-                    
+
                     // Update historical data for today
                     var todayData = data.HistoricalData.FirstOrDefault(kvp => kvp.Key.Date == DateTime.Today.Date);
                     int index = data.HistoricalData.IndexOf(todayData);
-                    
+
                     if (index >= 0)
                     {
                         data.HistoricalData[index] = new KeyValuePair<DateTime, double>(
@@ -233,7 +233,7 @@ namespace @interface
             {
                 return category;
             }
-            
+
             return "Other";
         }
 
@@ -259,7 +259,7 @@ namespace @interface
         public void SetProcessCategory(string processName, string category)
         {
             _processCategories[processName] = category;
-            
+
             // Update categories for existing processes
             foreach (var process in _processes.Values.Where(p => p.Name.Contains(processName)))
             {
@@ -274,7 +274,7 @@ namespace @interface
         {
             _monitorTimer?.Dispose();
             _saveDataTimer?.Dispose();
-            
+
             // Save data one more time before stopping
             SaveDataToCSV(null);
         }
@@ -302,7 +302,7 @@ namespace @interface
                     var todayOnTimeData = _dataService.GetDailySystemOnTime(1, lastBoot);
                     if (todayOnTimeData.Any())
                     {
-                         // The method calculates up to the current moment for today.
+                        // The method calculates up to the current moment for today.
                         double currentTodayOnTimeHours = todayOnTimeData.First().Value;
                         _dataService.SaveDailySystemOnTime(DateTime.Today, currentTodayOnTimeHours);
                         Console.WriteLine($"Saved today's system on-time: {currentTodayOnTimeHours:F2} hours.");
@@ -353,4 +353,4 @@ namespace @interface
             return DateTime.Now - lastBootTime;
         }
     }
-} 
+}

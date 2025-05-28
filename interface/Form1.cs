@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO; 
+using System.Reflection; 
 
 namespace @interface
 {
@@ -24,10 +26,11 @@ namespace @interface
         private ProcessMonitor _processMonitor;
         private UsageDataService _dataService;
         private Timer _updateTimer;
-        private const int DisplayDays = 30; // Number of days to display in the graph
+        private const int DisplayDays = 30; 
         private DateTime _lastBootTime;
-        private string _currentGraphView = "TOTAL_PC_ON_TIME"; // Possible values: TOTAL_PC_ON_TIME, CATEGORY, PROCESS
+        private string _currentGraphView = "TOTAL_PC_ON_TIME"; 
         private string _selectedCategoryForGraph = null;
+        private const string HelpFileName = "HelpTimeTracker.chm"; 
 
         /// <summary>
         /// Constructor for the main form
@@ -37,21 +40,21 @@ namespace @interface
             InitializeComponent();
             Text = "Process Time Tracker";
             Size = new Size(800, 600);
-            
+
             try
             {
                 _lastBootTime = ProcessMonitor.GetLastBootUpTime();
                 _dataService = new UsageDataService();
-                InitializeControls();
+                InitializeControls(); 
                 _processMonitor = new ProcessMonitor();
-                
+
                 _updateTimer = new Timer();
-                _updateTimer.Interval = 10000; // Update every 10 seconds for process list and stats
+                _updateTimer.Interval = 10000; 
                 _updateTimer.Tick += UpdateTimer_Tick;
                 _updateTimer.Start();
-                
+
                 LoadRealProcessData();
-                UpdateGraphView(); // Initial graph view
+                UpdateGraphView(); 
             }
             catch (Exception ex)
             {
@@ -66,11 +69,11 @@ namespace @interface
         {
             LoadRealProcessData();
             // Update stats panel with current uptime if no process is selected
-            if (_selectedProcess == null)
+            if (_selectedProcess == null && (_selectedCategoryForGraph == null || _selectedCategoryForGraph == "All"))
             {
                 TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
                 _statsPanel.UpdateSystemUptime(uptime);
-            } 
+            }
             // else the stats panel is updated by ProcessListView_SelectedIndexChanged or CategorySelector_CategorySelected
         }
 
@@ -87,7 +90,7 @@ namespace @interface
                 Title = "Usage Over Time",
                 TimeRange = "1 month"
             };
-            
+
             // Create the process list view
             _processListView = new ListView
             {
@@ -97,35 +100,29 @@ namespace @interface
                 FullRowSelect = true,
                 GridLines = true
             };
-            
-            // Add columns to the list view
+
             _processListView.Columns.Add("Name", 200);
             _processListView.Columns.Add("PID", 70);
             _processListView.Columns.Add("Dept", 100);
             _processListView.Columns.Add("Today", 80, HorizontalAlignment.Right);
-            
-            // Handle list view selection
             _processListView.SelectedIndexChanged += ProcessListView_SelectedIndexChanged;
-            
+
             // Create the category selector
             _categorySelector = new CategorySelector
             {
                 Location = new Point(570, 10),
-                Size = new Size(200, 250),
+                Size = new Size(200, 280), 
                 Categories = new List<string> { "Games", "Learning", "Coding", "Entertainment", "Other" }
             };
-            
-            // Handle category selection
             _categorySelector.CategorySelected += CategorySelector_CategorySelected;
-            
+            _categorySelector.HelpButtonClicked += CategorySelector_HelpButtonClicked; 
             // Create the stats panel
             _statsPanel = new StatsPanel
             {
-                Location = new Point(570, 270),
-                Size = new Size(200, 280)
+                Location = new Point(570, 300), 
+                Size = new Size(200, 250) 
             };
-            
-            // Add controls to the form
+
             Controls.Add(_usageGraph);
             Controls.Add(_processListView);
             Controls.Add(_categorySelector);
@@ -137,8 +134,11 @@ namespace @interface
         /// </summary>
         private void LoadRealProcessData()
         {
-            _processData = _processMonitor.GetProcessData();
-            UpdateProcessList();
+            if (_processMonitor != null) 
+            {
+                _processData = _processMonitor.GetProcessData();
+                UpdateProcessList();
+            }
         }
 
         /// <summary>
@@ -146,17 +146,16 @@ namespace @interface
         /// </summary>
         private void UpdateProcessList()
         {
+            if (_processListView == null || _processData == null || _categorySelector == null) return; 
+
             _processListView.Items.Clear();
-            
-            // Filter processes by category
             List<ProcessData> filteredProcesses = _processData;
-            
+
             if (_categorySelector.SelectedCategory != "All")
             {
                 filteredProcesses = _processData.Where(p => p.Department == _categorySelector.SelectedCategory).ToList();
             }
-            
-            // Add filtered processes to the list view
+
             foreach (ProcessData process in filteredProcesses)
             {
                 ListViewItem item = new ListViewItem(process.Name);
@@ -164,11 +163,9 @@ namespace @interface
                 item.SubItems.Add(process.Department);
                 item.SubItems.Add(FormatTimeSpan(process.TimeToday));
                 item.Tag = process;
-                
                 _processListView.Items.Add(item);
             }
-            
-            // If a process was previously selected, try to find and select it again
+
             if (_selectedProcess != null)
             {
                 foreach (ListViewItem item in _processListView.Items)
@@ -183,21 +180,15 @@ namespace @interface
             }
         }
 
-        /// <summary>
-        /// Formats a TimeSpan as hours and minutes
-        /// </summary>
-        /// <param name="time">TimeSpan to format</param>
-        /// <returns>Formatted time string</returns>
         private string FormatTimeSpan(TimeSpan time)
         {
             return $"{time.Hours}h {time.Minutes}m";
         }
 
-        /// <summary>
-        /// Updates the graph based on the current view state (_currentGraphView, _selectedProcess, _selectedCategoryForGraph)
-        /// </summary>
         private void UpdateGraphView()
         {
+            if (_usageGraph == null || _dataService == null) return; 
+
             List<KeyValuePair<DateTime, double>> graphData = new List<KeyValuePair<DateTime, double>>();
             string graphTitle = "PC Usage Data";
 
@@ -206,13 +197,13 @@ namespace @interface
                 case "PROCESS":
                     if (_selectedProcess != null)
                     {
-                        graphTitle = $"{_selectedProcess.Name} Usage (Active Time)";
+                        graphTitle = $"{_selectedProcess.Name} Usage (Active+Idle Time)"; 
                         graphData = _dataService.GetHistoricalDataForProcess(_selectedProcess.Name, DisplayDays);
                     }
                     else
                     {
                         _currentGraphView = "TOTAL_PC_ON_TIME";
-                        UpdateGraphView(); 
+                        UpdateGraphView();
                         return;
                     }
                     break;
@@ -226,8 +217,8 @@ namespace @interface
                     else
                     {
                         _currentGraphView = "TOTAL_PC_ON_TIME";
-                         _selectedCategoryForGraph = null; 
-                        UpdateGraphView(); 
+                        _selectedCategoryForGraph = null;
+                        UpdateGraphView();
                         return;
                     }
                     break;
@@ -235,96 +226,120 @@ namespace @interface
                 case "TOTAL_PC_ON_TIME":
                 default:
                     graphTitle = "Total PC On Time (Persisted)";
-                    // Use the persisted data for the graph
                     graphData = _dataService.GetPersistedDailySystemOnTime(DisplayDays);
-                    // For today's entry in the graph, we might want to update it with the live calculated value if it's more current
-                    // than the last saved value, or rely on ProcessMonitor to save it frequently.
-                    // For simplicity now, we use what's persisted. ProcessMonitor updates it every minute.
-                    _currentGraphView = "TOTAL_PC_ON_TIME"; 
+                    _currentGraphView = "TOTAL_PC_ON_TIME";
                     break;
             }
 
             _usageGraph.Title = graphTitle;
-            if (graphData.Any() && graphData.Any(d => d.Value > 0.001)) // Check if there's any significant data
+            if (graphData.Any() && graphData.Any(d => d.Value > 0.001))
             {
-                 _usageGraph.TimeData = graphData;
+                _usageGraph.TimeData = graphData;
             }
             else
             {
                 List<KeyValuePair<DateTime, double>> emptyTimeline = new List<KeyValuePair<DateTime, double>>();
                 for (int i = 0; i < DisplayDays; i++)
                 {
-                    emptyTimeline.Add(new KeyValuePair<DateTime, double>(DateTime.Today.AddDays(-(DisplayDays -1) + i), 0));
+                    emptyTimeline.Add(new KeyValuePair<DateTime, double>(DateTime.Today.AddDays(-(DisplayDays - 1) + i), 0));
                 }
                 _usageGraph.TimeData = emptyTimeline;
             }
             Console.WriteLine($"Graph updated: {graphTitle} with {graphData.Count} points. View: {_currentGraphView}");
         }
 
-        /// <summary>
-        /// Handles selection changes in the process list view
-        /// </summary>
         private void ProcessListView_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (_processListView.SelectedItems.Count > 0)
             {
                 ListViewItem item = _processListView.SelectedItems[0];
                 _selectedProcess = item.Tag as ProcessData;
-                _selectedCategoryForGraph = null; // Clear category selection
+                _selectedCategoryForGraph = null;
                 _currentGraphView = "PROCESS";
                 UpdateGraphView();
-                _statsPanel.UpdateStats(_selectedProcess); // Show process specific stats
+                if (_statsPanel != null && _selectedProcess != null)
+                {
+                    _statsPanel.UpdateStats(_selectedProcess);
+                }
             }
             else
             {
                 _selectedProcess = null;
-                 // If no category is actively selected for graph, revert to total PC on time
                 if (string.IsNullOrEmpty(_selectedCategoryForGraph) || _selectedCategoryForGraph == "All")
                 {
                     _currentGraphView = "TOTAL_PC_ON_TIME";
                 }
-                // Otherwise, keep the CATEGORY view (e.g. user cleared process selection but wants to see category graph)
                 UpdateGraphView();
-                _statsPanel.ClearStats();
-                TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
-                _statsPanel.UpdateSystemUptime(uptime); // Show system uptime
+                if (_statsPanel != null) 
+                {
+                    _statsPanel.ClearStats();
+                    TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
+                    _statsPanel.UpdateSystemUptime(uptime);
+                }
             }
         }
 
-        /// <summary>
-        /// Handles category selection changes from the CategorySelector panel
-        /// </summary>
         private void CategorySelector_CategorySelected(object sender, string category)
         {
-            UpdateProcessList(); // Filter the list view
-            _selectedProcess = null; // Clear any selected process
-            _processListView.SelectedItems.Clear(); // Visually clear selection in list
+            UpdateProcessList();
+            _selectedProcess = null;
+            if (_processListView != null) _processListView.SelectedItems.Clear();
 
             if (!string.IsNullOrEmpty(category) && category != "All")
             {
                 _selectedCategoryForGraph = category;
                 _currentGraphView = "CATEGORY";
-                _statsPanel.UpdateCategoryStats(category, _dataService.GetTotalActiveTimeForCategory(category, 1).FirstOrDefault().Value * 60); // Show total time for category today
+                if (_statsPanel != null && _dataService != null) 
+                {
+                    var categoryDataToday = _dataService.GetTotalActiveTimeForCategory(category, 1);
+                    double totalMinutesToday = categoryDataToday.Any() ? categoryDataToday.First().Value * 60 : 0;
+                    _statsPanel.UpdateCategoryStats(category, totalMinutesToday);
+                }
             }
             else
             {
                 _selectedCategoryForGraph = null;
                 _currentGraphView = "TOTAL_PC_ON_TIME";
-                _statsPanel.ClearStats();
-                 TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
-                _statsPanel.UpdateSystemUptime(uptime);
+                if (_statsPanel != null) 
+                {
+                    _statsPanel.ClearStats();
+                    TimeSpan uptime = ProcessMonitor.GetSystemUptime(_lastBootTime);
+                    _statsPanel.UpdateSystemUptime(uptime);
+                }
             }
             UpdateGraphView();
         }
 
-        /// <summary>
-        /// Clean up resources when form is closing
-        /// </summary>
+        private void CategorySelector_HelpButtonClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                string basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                string helpFilePath = Path.Combine(basePath, "Help", HelpFileName);
+
+                if (File.Exists(helpFilePath))
+                {
+                    Help.ShowHelp(this, helpFilePath);
+                }
+                else
+                {
+                    MessageBox.Show($"Fișierul de ajutor '{HelpFileName}' nu a fost găsit în subfolderul 'Help'.\nCalea verificată: {helpFilePath}",
+                                    "Eroare Ajutor", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"A apărut o eroare la deschiderea fișierului de ajutor:\n{ex.Message}",
+                                "Eroare Ajutor", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);
-            _updateTimer.Stop();
-            _processMonitor.StopMonitoring();
+            if (_updateTimer != null) _updateTimer.Stop(); 
+            if (_processMonitor != null) _processMonitor.StopMonitoring(); 
         }
     }
 }

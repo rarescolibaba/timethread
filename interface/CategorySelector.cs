@@ -2,23 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using System.IO;
+using System.Reflection; 
 
 namespace @interface
 {
     /// <summary>
-    /// Control for selecting process categories
+    /// Control for selecting process categories and accessing help
     /// </summary>
     public class CategorySelector : Panel
     {
-        /// <summary>
-        /// Available categories
-        /// </summary>
         private List<string> _categories;
-
-        /// <summary>
-        /// Currently selected category
-        /// </summary>
         private string _selectedCategory;
+        private Button _helpButton; 
 
         /// <summary>
         /// Event raised when a category is selected
@@ -26,21 +22,20 @@ namespace @interface
         public event EventHandler<string> CategorySelected;
 
         /// <summary>
-        /// Gets or sets the available categories
+        /// Event raised when the Help button is clicked
         /// </summary>
+        public event EventHandler HelpButtonClicked;
+
         public List<string> Categories
         {
             get { return _categories; }
             set
             {
                 _categories = value;
-                CreateCategoryButtons();
+                CreateCategoryButtons(); 
             }
         }
 
-        /// <summary>
-        /// Gets or sets the selected category
-        /// </summary>
         public string SelectedCategory
         {
             get { return _selectedCategory; }
@@ -51,19 +46,14 @@ namespace @interface
             }
         }
 
-        /// <summary>
-        /// Constructor for CategorySelector
-        /// </summary>
         public CategorySelector()
         {
             _categories = new List<string>();
             _selectedCategory = "All";
-            
-            // Set panel properties
+
             BorderStyle = BorderStyle.FixedSingle;
             Padding = new Padding(5);
-            
-            // Add default title
+
             Label titleLabel = new Label
             {
                 Text = "Categories",
@@ -71,42 +61,51 @@ namespace @interface
                 AutoSize = true,
                 Location = new Point(5, 5)
             };
-            
             Controls.Add(titleLabel);
+            CreateCategoryButtons();
         }
 
-        /// <summary>
-        /// Creates buttons for each category
-        /// </summary>
         private void CreateCategoryButtons()
         {
-            // Clear existing buttons
+            List<Control> controlsToRemove = new List<Control>();
             foreach (Control control in Controls)
             {
-                if (control is Button)
+                if (control is Button) 
                 {
-                    Controls.Remove(control);
+                    controlsToRemove.Add(control);
                 }
             }
-            
-            // Add "All" category button
+            foreach (Control control in controlsToRemove)
+            {
+                Controls.Remove(control);
+                control.Dispose();
+            }
+
             AddCategoryButton("All", 0);
-            
-            // Add buttons for each category
+
             for (int i = 0; i < _categories.Count; i++)
             {
                 AddCategoryButton(_categories[i], i + 1);
             }
-            
-            // Update button states
+
+            int helpButtonYPosition = 30 + ((_categories.Count > 0 ? _categories.Count : 0) + 1) * 35; 
+
+            _helpButton = new Button
+            {
+                Text = "Help",
+                Tag = "HelpButton", 
+                Width = 100,
+                Height = 30,
+                Location = new Point(10, helpButtonYPosition),
+                FlatStyle = FlatStyle.System 
+            };
+            _helpButton.Click += HelpButton_Click;
+            Controls.Add(_helpButton);
+
+
             UpdateButtonStates();
         }
 
-        /// <summary>
-        /// Adds a button for a category
-        /// </summary>
-        /// <param name="category">Category name</param>
-        /// <param name="index">Button index</param>
         private void AddCategoryButton(string category, int index)
         {
             Button button = new Button
@@ -118,22 +117,19 @@ namespace @interface
                 Location = new Point(10, 30 + (index * 35)),
                 FlatStyle = FlatStyle.Flat
             };
-            
+
             button.Click += CategoryButton_Click;
             Controls.Add(button);
         }
 
-        /// <summary>
-        /// Updates the visual state of category buttons
-        /// </summary>
         private void UpdateButtonStates()
         {
             foreach (Control control in Controls)
             {
-                if (control is Button button)
+                if (control is Button button && button.Tag?.ToString() != "HelpButton") 
                 {
                     string category = button.Tag as string;
-                    
+
                     if (category == _selectedCategory)
                     {
                         button.BackColor = SystemColors.Highlight;
@@ -148,21 +144,19 @@ namespace @interface
             }
         }
 
-        /// <summary>
-        /// Handles click events on category buttons
-        /// </summary>
-        /// <param name="sender">Event sender</param>
-        /// <param name="e">Event arguments</param>
         private void CategoryButton_Click(object sender, EventArgs e)
         {
             if (sender is Button button)
             {
                 string category = button.Tag as string;
                 SelectedCategory = category;
-                
-                // Raise the CategorySelected event
                 CategorySelected?.Invoke(this, category);
             }
         }
+
+        private void HelpButton_Click(object sender, EventArgs e)
+        {
+            HelpButtonClicked?.Invoke(this, EventArgs.Empty);
+        }
     }
-} 
+}

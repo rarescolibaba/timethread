@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -76,4 +76,4 @@ namespace @interface
             return TimeSpan.FromTicks((long)(TimeToday.Ticks * 0.3));
         }
     }
-} 
+}
