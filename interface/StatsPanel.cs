@@ -1,7 +1,7 @@
 // AUTORI: Bostan Sorina-Gabriela, Brinza Denis-Stefan, Colibaba Rares-Andrei, Dodita Alexandru-Tomi
 // UNIVERSITATEA TEHNICA GHEORGHE ASACHI, GRUPA 1312A
 // Functionalitate:
-//Control pentru afisarea statisticilor de utilizare pentru procese, categorii si sistem in aplicatia Process Time Tracker.
+// Control pentru afisarea statisticilor de utilizare pentru procese, categorii si sistem in aplicatia Process Time Tracker.
 // ---------------------------------------------------------------------------------------------------
 using System;
 using System.Drawing;
@@ -36,16 +36,16 @@ namespace @interface
         {
             BorderStyle = BorderStyle.FixedSingle;
             Padding = new Padding(5);
-            
+
             InitializeLabels();
         }
 
         /// <summary>
-        /// Initializes the labels for the stats panel
+        /// Initializeaza etichetele pentru panoul de statistici
         /// </summary>
         private void InitializeLabels()
         {
-            // Title label
+            // Eticheta titlu
             _titleLabel = new Label
             {
                 Text = "Statistics",
@@ -53,32 +53,32 @@ namespace @interface
                 AutoSize = true,
                 Location = new Point(10, 10)
             };
-            
-            // Total time label
+
+            // Eticheta timpul total
             _totalTimeLabel = new Label
             {
                 Text = "Total today",
                 AutoSize = true,
                 Location = new Point(10, 40)
             };
-            
-            // Idle time label
+
+            // Eticheta timp inactiv
             _idleTimeLabel = new Label
             {
                 Text = "Idle",
                 AutoSize = true,
                 Location = new Point(10, 70)
             };
-            
-            // Active time label
+
+            // Eticheta timp activ
             _activeTimeLabel = new Label
             {
                 Text = "Active",
                 AutoSize = true,
                 Location = new Point(10, 100)
             };
-            
-            // Total time value label
+
+            // Valoare timp total
             _totalTimeValueLabel = new Label
             {
                 Text = "0h 0m",
@@ -87,8 +87,8 @@ namespace @interface
                 Location = new Point(100, 40),
                 TextAlign = ContentAlignment.MiddleRight
             };
-            
-            // Idle time value label
+
+            // Valoare timp inactiv
             _idleTimeValueLabel = new Label
             {
                 Text = "0h 0m",
@@ -97,8 +97,8 @@ namespace @interface
                 Location = new Point(100, 70),
                 TextAlign = ContentAlignment.MiddleRight
             };
-            
-            // Active time value label
+
+            // Valoare timp activ
             _activeTimeValueLabel = new Label
             {
                 Text = "0h 0m",
@@ -107,8 +107,8 @@ namespace @interface
                 Location = new Point(100, 100),
                 TextAlign = ContentAlignment.MiddleRight
             };
-            
-            // System Uptime Label
+
+            // Eticheta uptime sistem
             _systemUptimeLabel = new Label
             {
                 Text = "System Uptime",
@@ -116,6 +116,7 @@ namespace @interface
                 Location = new Point(10, 130)
             };
 
+            // Valoare uptime sistem
             _systemUptimeValueLabel = new Label
             {
                 Text = "0d 0h 0m",
@@ -124,8 +125,8 @@ namespace @interface
                 Location = new Point(100, 130),
                 TextAlign = ContentAlignment.MiddleRight
             };
-            
-            // Category Time Label (initially hidden or generic)
+
+            // Eticheta timp categorie (initial invizibila)
             _categoryTimeLabel = new Label
             {
                 Text = "Category Time",
@@ -134,6 +135,7 @@ namespace @interface
                 Visible = false
             };
 
+            // Valoare timp categorie (initial invizibila)
             _categoryTimeValueLabel = new Label
             {
                 Text = "0h 0m",
@@ -143,8 +145,8 @@ namespace @interface
                 TextAlign = ContentAlignment.MiddleRight,
                 Visible = false
             };
-            
-            // Add labels to panel
+
+            // Adauga etichetele in panou
             Controls.Add(_titleLabel);
             Controls.Add(_totalTimeLabel);
             Controls.Add(_idleTimeLabel);
@@ -159,9 +161,9 @@ namespace @interface
         }
 
         /// <summary>
-        /// Actualizeaza statisticile cu datele procesului
+        /// Actualizeaza statisticile cu datele unui proces
         /// </summary>
-        /// <param name="processData">Process data to display</param>
+        /// <param name="processData">Datele procesului pentru afisare</param>
         public void UpdateStats(ProcessData processData)
         {
             try
@@ -171,13 +173,13 @@ namespace @interface
                     ClearStats();
                     return;
                 }
-                
+
                 _titleLabel.Text = processData.Name;
-                
+
                 TimeSpan totalTime = processData.GetTotalTime();
                 TimeSpan idleTime = processData.GetIdleTime();
                 TimeSpan activeTime = processData.GetActiveTime();
-                
+
                 _totalTimeValueLabel.Text = Utils.FormatTimeSpan(totalTime);
                 _idleTimeValueLabel.Text = Utils.FormatTimeSpan(idleTime);
                 _activeTimeValueLabel.Text = Utils.FormatTimeSpan(activeTime);
@@ -191,10 +193,10 @@ namespace @interface
         }
 
         /// <summary>
-        /// Actualizeaza panoul pentru a arata timpul activ total pentru o categorie astazi
+        /// Actualizeaza panoul pentru a afisa timpul activ total pentru o categorie astazi
         /// </summary>
-        /// <param name="categoryName">The name of the category.</param>
-        /// <param name="totalActiveMinutesToday">Total active minutes for the category today.</param>
+        /// <param name="categoryName">Numele categoriei</param>
+        /// <param name="totalActiveMinutesToday">Timpul activ total astazi (minute)</param>
         public void UpdateCategoryStats(string categoryName, double totalActiveMinutesToday)
         {
             try
@@ -202,7 +204,7 @@ namespace @interface
                 _titleLabel.Text = $"{categoryName} Stats";
                 _categoryTimeLabel.Text = "Today's Active";
                 _categoryTimeValueLabel.Text = Utils.FormatTimeSpan(TimeSpan.FromMinutes(totalActiveMinutesToday));
-                
+
                 SetLabelVisibility(isCategoryView: true);
             }
             catch (Exception ex)
@@ -214,17 +216,17 @@ namespace @interface
         /// <summary>
         /// Actualizeaza afisarea timpului de functionare al sistemului
         /// </summary>
-        /// <param name="uptime">Current system uptime.</param>
+        /// <param name="uptime">Timpul curent de functionare al sistemului</param>
         public void UpdateSystemUptime(TimeSpan uptime)
         {
             try
             {
                 if (_titleLabel.Text == "Statistics" || string.IsNullOrEmpty(_titleLabel.Text))
                 {
-                     _titleLabel.Text = "System Stats";
+                    _titleLabel.Text = "System Stats";
                 }
                 _systemUptimeValueLabel.Text = $"{uptime.Days}d {uptime.Hours}h {uptime.Minutes}m";
-                SetLabelVisibility(isSystemView: true); 
+                SetLabelVisibility(isSystemView: true);
             }
             catch (Exception ex)
             {
@@ -255,11 +257,11 @@ namespace @interface
         }
 
         /// <summary>
-        /// Seteaza vizibilitatea etichetelor in functie de tipul de statistici afisate
+        /// Seteaza vizibilitatea etichetelor in functie de tipul statisticilor afisate
         /// </summary>
-        /// <param name="isProcessView">True daca se afiseaza statistici pentru procese</param>
-        /// <param name="isCategoryView">True daca se afiseaza statistici pentru categorii</param>
-        /// <param name="isSystemView">True daca se afiseaza statistici pentru sistem</param>
+        /// <param name="isProcessView">Adevarat daca se afiseaza statistici pentru procese</param>
+        /// <param name="isCategoryView">Adevarat daca se afiseaza statistici pentru categorii</param>
+        /// <param name="isSystemView">Adevarat daca se afiseaza statistici pentru sistem</param>
         private void SetLabelVisibility(bool isProcessView = false, bool isCategoryView = false, bool isSystemView = false)
         {
             _totalTimeLabel.Visible = isProcessView;

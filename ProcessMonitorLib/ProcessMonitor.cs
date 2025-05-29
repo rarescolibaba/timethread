@@ -220,7 +220,7 @@ namespace ProcessMonitorLib
                     _processDataChangedSinceLastSave = true;
                 foreach (int pid in processesToRemove)
                 {
-                    SafeNotifyProcessRemoved(pid); // Notifica observatorii
+                    SafeNotifyProcessRemoved(pid); // notifica observatorii
                 }
             }
             catch (Exception ex)
@@ -383,7 +383,6 @@ namespace ProcessMonitorLib
                 if (updatedProcesses.Count > 0)
                 {
                     _processDataChangedSinceLastSave = true;
-                    //notify once for all updated processes
                     SafeNotifyProcessesUpdated(updatedProcesses);
                 }
             }
@@ -485,7 +484,7 @@ namespace ProcessMonitorLib
             {
                 Logger.Log(new ProcessMonitorException("Error getting last boot up time.", ex), "GetLastBootUpTime");
             }
-            return DateTime.MinValue; // Nu ar trebui sa se intample in mod normal
+            return DateTime.MinValue;
         }
 
         /// <summary>
@@ -507,7 +506,6 @@ namespace ProcessMonitorLib
         {
             if (observer == null) return;
             _observers.Add(new WeakReference<IProcessObserver>(observer));
-            // Immediately sync state for new observer
             var snapshot = GetProcessSnapshot();
             foreach (var process in snapshot)
             {
@@ -518,10 +516,10 @@ namespace ProcessMonitorLib
 
         public void Unsubscribe(IProcessObserver observer)
         {
-            // No direct removal in ConcurrentBag; rely on WeakReference GC
+            
         }
 
-        // Helper to get live observers
+        // Helper
         private List<IProcessObserver> GetLiveObservers()
         {
             var live = new List<IProcessObserver>();
@@ -567,7 +565,6 @@ namespace ProcessMonitorLib
             try
             {
                 System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {context}: {ex}");
-                // Optionally, log to file or telemetry here
             }
             catch { }
         }

@@ -72,7 +72,6 @@ namespace ProcessDataLib
         /// <returns>Timp total ca TimeSpan</returns>
         public TimeSpan GetTotalTime()
         {
-            // In a real implementation, this would calculate the total time
             return TimeToday;
         }
 
@@ -82,8 +81,6 @@ namespace ProcessDataLib
         /// <returns>Timp activ ca TimeSpan</returns>
         public TimeSpan GetActiveTime()
         {
-            // In a real implementation, this would calculate the active time
-            // For now, we'll assume 70% of total time is active
             return TimeSpan.FromTicks((long)(TimeToday.Ticks * 0.7));
         }
 
@@ -93,8 +90,6 @@ namespace ProcessDataLib
         /// <returns>Timp inactiv ca TimeSpan</returns>
         public TimeSpan GetIdleTime()
         {
-            // In a real implementation, this would calculate the idle time
-            // For now, we'll assume 30% of total time is idle
             return TimeSpan.FromTicks((long)(TimeToday.Ticks * 0.3));
         }
     }

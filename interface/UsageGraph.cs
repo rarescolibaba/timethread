@@ -7,27 +7,27 @@ using System.Windows.Forms;
 namespace @interface
 {
     /// <summary>
-    /// Custom control for rendering the usage graph
+    /// Control personalizat pentru redarea graficului de utilizare
     /// </summary>
     public class UsageGraph : Control
     {
         /// <summary>
-        /// Collection of time data points
+        /// Colectie de puncte de date temporale
         /// </summary>
         private List<KeyValuePair<DateTime, double>> _timeData;
 
         /// <summary>
-        /// Selected time range (day, week, month)
+        /// Intervalul selectat de timp (zi, saptamana, luna)
         /// </summary>
         private string _timeRange;
 
         /// <summary>
-        /// Title of the graph
+        /// Titlul graficului
         /// </summary>
         private string _title;
 
         /// <summary>
-        /// Gets or sets the time data for the graph
+        /// Obtine sau seteaza datele temporale pentru grafic
         /// </summary>
         public List<KeyValuePair<DateTime, double>> TimeData
         {
@@ -35,12 +35,12 @@ namespace @interface
             set
             {
                 _timeData = value;
-                Invalidate(); // Redraw when data changes
+                Invalidate(); // Redesenare la modificarea datelor
             }
         }
 
         /// <summary>
-        /// Gets or sets the time range for the graph
+        /// Obtine sau seteaza intervalul de timp pentru grafic
         /// </summary>
         public string TimeRange
         {
@@ -48,12 +48,12 @@ namespace @interface
             set
             {
                 _timeRange = value;
-                Invalidate(); // Redraw when range changes
+                Invalidate(); // Redesenare la modificarea intervalului
             }
         }
 
         /// <summary>
-        /// Gets or sets the title of the graph
+        /// Obtine sau seteaza titlul graficului
         /// </summary>
         public string Title
         {
@@ -61,175 +61,167 @@ namespace @interface
             set
             {
                 _title = value;
-                Invalidate(); // Redraw when title changes
+                Invalidate(); // Redesenare la modificarea titlului
             }
         }
 
         /// <summary>
-        /// Constructor for UsageGraph
+        /// Constructor pentru UsageGraph
         /// </summary>
         public UsageGraph()
         {
             _timeData = new List<KeyValuePair<DateTime, double>>();
             _timeRange = "1 month";
             _title = "Usage Over Time";
-            
-            // Set control styles for better rendering
-            SetStyle(ControlStyles.AllPaintingInWmPaint | 
-                     ControlStyles.OptimizedDoubleBuffer | 
-                     ControlStyles.ResizeRedraw | 
+
+            // Seteaza stiluri de control pentru redare mai buna
+            SetStyle(ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer |
+                     ControlStyles.ResizeRedraw |
                      ControlStyles.UserPaint, true);
         }
 
         /// <summary>
-        /// Updates the time range of displayed data
+        /// Actualizeaza intervalul de timp afisat
         /// </summary>
-        /// <param name="range">New time range</param>
+        /// <param name="range">Intervalul nou de timp</param>
         public void UpdateTimeRange(string range)
         {
             TimeRange = range;
         }
 
         /// <summary>
-        /// Handles the painting of the control
+        /// Gestioneaza redarea controlului
         /// </summary>
-        /// <param name="e">Paint event arguments</param>
+        /// <param name="e">Argumentele evenimentului de pictare</param>
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            
+
             Graphics g = e.Graphics;
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            
-            // Draw border
+
+            // Deseneaza chenarul
             using (Pen borderPen = new Pen(Color.Black, 2))
             {
                 g.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
             }
-            
-            // Draw title
+
+            // Deseneaza titlul
             using (Font titleFont = new Font("Arial", 12, FontStyle.Bold))
             {
                 g.DrawString(_title, titleFont, Brushes.Black, 10, 10);
             }
-            
-            // Draw time range
+
+            // Deseneaza intervalul de timp
             using (Font rangeFont = new Font("Arial", 10))
             {
                 g.DrawString(_timeRange, rangeFont, Brushes.Black, Width - 100, 10);
             }
-            
-            // If no data, show message
+
+            // Daca nu exista date, afiseaza mesaj
             if (_timeData == null || _timeData.Count == 0)
             {
                 using (Font messageFont = new Font("Arial", 12))
                 {
-                    g.DrawString("No data available", messageFont, Brushes.Gray, 
+                    g.DrawString("No data available", messageFont, Brushes.Gray,
                         Width / 2 - 50, Height / 2);
                 }
                 return;
             }
-            
-            // Draw graph
+
+            // Deseneaza graficul
             DrawGraph(g);
         }
 
         /// <summary>
-        /// Draws the graph based on current data
+        /// Deseneaza graficul pe baza datelor curente
         /// </summary>
-        /// <param name="g">Graphics object</param>
+        /// <param name="g">Obiectul Graphics</param>
         private void DrawGraph(Graphics g)
         {
             if (_timeData.Count == 0) return;
 
-            // Graph dimensions
+            // Dimensiuni graf
             int margin = 40;
             int graphWidth = Width - 2 * margin;
             int graphHeight = Height - 2 * margin;
             int graphBottom = Height - margin;
             int graphLeft = margin;
-            
-            // Find max value for scaling
+
+            // Valoare maxima
             double maxValue = _timeData.Max(d => d.Value);
-            if (maxValue < 1) maxValue = 1; // Ensure minimum scale of 1 hour
-            
-            // Draw Y-axis
+            if (maxValue < 1) maxValue = 1;
+
+            // Axa Y
             using (Pen axisPen = new Pen(Color.Black, 1))
             {
                 g.DrawLine(axisPen, graphLeft, margin, graphLeft, graphBottom);
-                
-                // Draw Y-axis labels
+
+
                 using (Font axisFont = new Font("Arial", 8))
                 {
-                    // Draw max value
-                    g.DrawString(maxValue.ToString("0.0") + "h", axisFont, Brushes.Black, 
+                    g.DrawString(maxValue.ToString("0.0") + "h", axisFont, Brushes.Black,
                         graphLeft - 30, margin);
-                    
-                    // Draw middle value
-                    g.DrawString((maxValue / 2).ToString("0.0") + "h", axisFont, Brushes.Black, 
+
+                    g.DrawString((maxValue / 2).ToString("0.0") + "h", axisFont, Brushes.Black,
                         graphLeft - 30, margin + graphHeight / 2);
-                    
-                    // Draw zero
-                    g.DrawString("0h", axisFont, Brushes.Black, 
+
+                    g.DrawString("0h", axisFont, Brushes.Black,
                         graphLeft - 30, graphBottom);
                 }
-                
-                // Draw X-axis
+
                 g.DrawLine(axisPen, graphLeft, graphBottom, Width - margin, graphBottom);
-                
-                // Draw X-axis labels - show more dates for better readability
+
+                // Axa X
                 if (_timeData.Count > 0)
                 {
                     using (Font axisFont = new Font("Arial", 8))
                     {
-                        // Draw dates at regular intervals
-                        int labelCount = Math.Min(5, _timeData.Count); // Show up to 5 date labels
+                        int labelCount = Math.Min(5, _timeData.Count); // Afiseaza 5 dati
                         int step = _timeData.Count / labelCount;
-                        
+
                         for (int i = 0; i < _timeData.Count; i += step)
                         {
                             if (i < _timeData.Count)
                             {
                                 float xPos = graphLeft + (i * graphWidth / (_timeData.Count - 1));
-                                g.DrawString(_timeData[i].Key.ToString("MM/dd"), axisFont, Brushes.Black, 
+                                g.DrawString(_timeData[i].Key.ToString("MM/dd"), axisFont, Brushes.Black,
                                     xPos - 10, graphBottom + 5);
                             }
                         }
-                        
-                        // Always show the last date
+
+                        // Afiseaza ultima data mereu
                         if (_timeData.Count > 1)
                         {
                             float xPos = graphLeft + graphWidth;
-                            g.DrawString(_timeData.Last().Key.ToString("MM/dd"), axisFont, Brushes.Black, 
+                            g.DrawString(_timeData.Last().Key.ToString("MM/dd"), axisFont, Brushes.Black,
                                 xPos - 10, graphBottom + 5);
                         }
                     }
                 }
             }
-            
-            // Draw data points and lines
+
             if (_timeData.Count > 1)
             {
                 using (Pen linePen = new Pen(Color.Blue, 2))
                 {
-                    // Calculate points
+                    // Calculare puncte
                     Point[] points = new Point[_timeData.Count];
-                    
+
                     for (int i = 0; i < _timeData.Count; i++)
                     {
-                        // X position based on date range
+                        // X
                         float xPos = graphLeft + (i * graphWidth / (_timeData.Count - 1));
-                        
-                        // Y position based on value (inverted, since 0,0 is top-left)
+
+                        // Y
                         float yPos = graphBottom - (float)(_timeData[i].Value / maxValue * graphHeight);
-                        
+
                         points[i] = new Point((int)xPos, (int)yPos);
                     }
-                    
-                    // Draw lines between points
+
                     g.DrawLines(linePen, points);
-                    
-                    // Draw points
+
                     using (Brush pointBrush = new SolidBrush(Color.Blue))
                     {
                         foreach (Point p in points)
@@ -237,28 +229,25 @@ namespace @interface
                             g.FillEllipse(pointBrush, p.X - 3, p.Y - 3, 6, 6);
                         }
                     }
-                    
-                    // Draw value labels for some points for better readability
+
                     using (Font valueFont = new Font("Arial", 7))
                     {
-                        // Draw labels for some points (not all to avoid clutter)
                         int labelStep = Math.Max(1, _timeData.Count / 10);
                         for (int i = 0; i < _timeData.Count; i += labelStep)
                         {
-                            if (_timeData[i].Value > 0.1) // Only show value if significant
+                            if (_timeData[i].Value > 0.1) // Doar valorile importante
                             {
                                 string valueText = _timeData[i].Value.ToString("0.0") + "h";
-                                g.DrawString(valueText, valueFont, Brushes.DarkBlue, 
+                                g.DrawString(valueText, valueFont, Brushes.DarkBlue,
                                     points[i].X - 8, points[i].Y - 15);
                             }
                         }
-                        
-                        // Always show the last value if significant
+
                         if (_timeData.Last().Value > 0.1)
                         {
                             int lastIndex = _timeData.Count - 1;
                             string valueText = _timeData[lastIndex].Value.ToString("0.0") + "h";
-                            g.DrawString(valueText, valueFont, Brushes.DarkBlue, 
+                            g.DrawString(valueText, valueFont, Brushes.DarkBlue,
                                 points[lastIndex].X - 8, points[lastIndex].Y - 15);
                         }
                     }
@@ -266,4 +255,4 @@ namespace @interface
             }
         }
     }
-} 
+}

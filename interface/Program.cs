@@ -9,7 +9,7 @@ namespace @interface
     internal static class Program
     {
         /// <summary>
-        /// The main entry point for the application.
+        /// Punctul de intrare in aplicatie.
         /// </summary>
         [STAThread]
         static void Main()
